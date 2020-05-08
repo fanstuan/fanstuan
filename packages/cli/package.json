@@ -1,6 +1,6 @@
 {
   "name": "@fanstuan/cli",
-  "version": "0.0.0",
+  "version": "0.0.1-alpha.0",
   "description": "> TODO: description",
   "author": "L.Rain <bxy2997@sina.com>",
   "homepage": "https://github.com/fanstuan/fanstuan#readme",
@@ -9,8 +9,8 @@
   "directories": {
     "lib": "lib"
   },
-  "bin":{
-    "test":"./bin/test.js"
+  "bin": {
+    "test": "./bin/test.js"
   },
   "files": [
     "lib"
