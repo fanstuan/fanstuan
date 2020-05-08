@@ -1,0 +1,32 @@
+{
+  "name": "@fanstuan/cli",
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "L.Rain <bxy2997@sina.com>",
+  "homepage": "https://github.com/fanstuan/fanstuan#readme",
+  "license": "ISC",
+  "main": "lib/cli.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "bin":{
+    "test":"./bin/test.js"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fanstuan/fanstuan.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/fanstuan/fanstuan/issues"
+  }
+}
