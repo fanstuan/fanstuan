@@ -10,21 +10,19 @@
     "lib": "lib"
   },
   "bin": {
-    "test": "./bin/test.js"
+    "ftest": "./bin/test.js"
   },
   "files": [
     "lib"
   ],
   "publishConfig": {
-    "access": "public",
-    "registry": "https://npm.pkg.github.com/"
+    "access": "public"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fanstuan/fanstuan.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1"
   },
   "bugs": {
     "url": "https://github.com/fanstuan/fanstuan/issues"
