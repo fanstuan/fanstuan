@@ -6,11 +6,12 @@
   "homepage": "https://github.com/fanstuan/fanstuan#readme",
   "license": "ISC",
   "main": "lib/cli.js",
+  "type": "module",
   "directories": {
     "lib": "lib"
   },
   "bin": {
-    "ftest": "./bin/test.js"
+    "fantuan": "./bin/fantuan.js"
   },
   "files": [
     "lib"
@@ -25,5 +26,10 @@
   "scripts": {},
   "bugs": {
     "url": "https://github.com/fanstuan/fanstuan/issues"
+  },
+  "dependencies": {
+    "commander": "^5.1.0",
+    "download-git-repo": "^3.0.2",
+    "inquirer": "^7.1.0"
   }
 }
