@@ -1,6 +1,9 @@
 {
   "name": "root",
   "private": true,
+  "scripts": {
+    "test":"node packages/cli/bin/fantuan.js download"
+  },
   "workspaces": [
     "packages/*"
   ],
