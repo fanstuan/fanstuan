@@ -2,14 +2,25 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "test": "node --experimental-modules packages/cli/bin/fantuan.js download"
+    "test": "node --experimental-modules packages/cli/bin/fantuan.js download",
+    "format": "prettier-standard packages/cli/bin/fantuan.js"
   },
   "workspaces": [
     "packages/*"
   ],
   "devDependencies": {
+    "eslint": "^7.0.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-config-prettier-standard": "^3.0.1",
+    "eslint-config-standard": "^14.1.1",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.1.3",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1",
     "lerna": "^3.20.2",
-    "prettier-standard": "^16.3.0"
+    "prettier": "2.0.5",
+    "prettier-config-standard": "^1.0.1"
   },
   "dependencies": {}
 }
