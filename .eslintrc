@@ -3,7 +3,8 @@
     "ecmaVersion": 11,
     "sourceType": "module"
   },
-  "extends": [
-    "prettier-standard"
-  ]
+  "globals": {
+    "program": true
+  },
+  "extends": ["prettier-standard"]
 }

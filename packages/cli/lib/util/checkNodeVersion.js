@@ -1,20 +1,20 @@
-import chalk from "chalk";   // 命令行输出美化
-import semver from 'semver';
-export default function checkNodeVersion(wanted, cliName) {
+import chalk from 'chalk' // 命令行输出美化
+import semver from 'semver'
+export default function checkNodeVersion (wanted, cliName) {
   // 检测node版本是否符合要求范围
   if (!semver.satisfies(process.version, wanted)) {
     console.log(
       chalk.red(
-        "You are using Node " +
+        'You are using Node ' +
           process.version +
-          ", but this version of " +
+          ', but this version of ' +
           cliName +
-          " requires Node " +
+          ' requires Node ' +
           wanted +
-          ".\nPlease upgrade your Node version."
+          '.\nPlease upgrade your Node version.'
       )
-    );
+    )
     // 退出进程
-    process.exit(1);
+    process.exit(1)
   }
 }
