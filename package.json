@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test": "node --experimental-modules packages/cli/bin/fantuan.js download",
-    "format": "prettier-standard packages/cli/bin/fantuan.js"
+    "format": "prettier-standard packages/cli/bin/fantuan.js",
+    "clear":"rd /S /Q node_modules"
   },
   "workspaces": [
     "packages/*"
@@ -21,6 +22,5 @@
     "lerna": "^3.20.2",
     "prettier": "2.0.5",
     "prettier-config-standard": "^1.0.1"
-  },
-  "dependencies": {}
+  }
 }
