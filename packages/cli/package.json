@@ -5,14 +5,17 @@
   "author": "L.Rain <bxy2997@sina.com>",
   "homepage": "https://github.com/fanstuan/fanstuan#readme",
   "license": "ISC",
+  "engines":{
+    "node":">=12"
+  },
   "main": "lib/cli.js",
-  "type": "module",
   "directories": {
     "lib": "lib"
   },
   "bin": {
     "fantuan": "./bin/fantuan.js"
   },
+  "type":"module",
   "files": [
     "lib"
   ],
