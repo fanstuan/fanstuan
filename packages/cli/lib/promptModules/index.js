@@ -1,4 +1,2 @@
-import git from "./modules/git.js";
-export {
-  git,
-};
+import git from './modules/git.js'
+export { git }
