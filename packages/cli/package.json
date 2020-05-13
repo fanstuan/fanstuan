@@ -31,11 +31,11 @@
     "url": "https://github.com/fanstuan/fanstuan/issues"
   },
   "dependencies": {
-    "commander": "^5.1.0",
-    "didyoumean": "^1.2.1",
-    "download-git-repo": "^3.0.2",
-    "inquirer": "^7.1.0",
-    "semver": "^7.3.2"
+    "commander": "git://github.com/tj/commander.js",
+    "didyoumean": "git://github.com/dcporter/didyoumean.js",
+    "download-git-repo":  "gitlab:flippidippi/download-git-repo",
+    "inquirer": "git://github.com/SBoudrias/Inquirer.js",
+    "semver": "git://github.com/npm/node-semver"
   },
   "gitHead": "99feb2115e3807e964f3385f6c449a9babdb5eb4"
 }
