@@ -36,5 +36,6 @@
     "download-git-repo": "^3.0.2",
     "inquirer": "^7.1.0",
     "semver": "^7.3.2"
-  }
+  },
+  "gitHead": "99feb2115e3807e964f3385f6c449a9babdb5eb4"
 }
