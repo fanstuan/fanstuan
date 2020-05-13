@@ -5,8 +5,8 @@
   "author": "L.Rain <bxy2997@sina.com>",
   "homepage": "https://github.com/fanstuan/fanstuan#readme",
   "license": "ISC",
-  "engines":{
-    "node":">=12"
+  "engines": {
+    "node": ">=12"
   },
   "main": "lib/cli.js",
   "directories": {
@@ -15,7 +15,7 @@
   "bin": {
     "fantuan": "./bin/fantuan.js"
   },
-  "type":"module",
+  "type": "module",
   "files": [
     "lib"
   ],
@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "commander": "^5.1.0",
+    "didyoumean": "^1.2.1",
     "download-git-repo": "^3.0.2",
     "inquirer": "^7.1.0",
     "semver": "^7.3.2"

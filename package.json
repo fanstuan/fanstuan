@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "test": "node --experimental-modules packages/cli/bin/fantuan.js download",
+    "test": "node --experimental-modules packages/cli/bin/fantuan.js",
     "format": "prettier-standard packages/cli/bin/fantuan.js",
     "clear": "rd /S /Q node_modules"
   },
