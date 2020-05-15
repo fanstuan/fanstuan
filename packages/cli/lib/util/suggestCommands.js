@@ -1,4 +1,4 @@
-import didYouMean from 'didYouMean' // 简易的智能匹配引擎
+import didYouMean from 'didyoumean2'// 简易的智能匹配引擎
 import program from 'commander'
 import chalk from 'chalk'
 export default function suggestCommands (cmd) {
@@ -6,7 +6,7 @@ export default function suggestCommands (cmd) {
     return cmd._name
   })
   // 简易智能匹配用户命令
-  const suggestion = didYouMean(cmd, avaliableCommands)
+  const suggestion = didYouMean.default(cmd, avaliableCommands)
   if (suggestion) {
     console.log('  ' + chalk.red(`Did you mean ${chalk.yellow(suggestion)}?`))
   }
