@@ -1,6 +1,6 @@
 import chalk from 'chalk' // 命令行输出美化
 import semver from 'semver'
-export default function checkNodeVersion (wanted, cliName) {
+export default function checkNodeVersion (wanted: string, cliName: string) {
   // 检测node版本是否符合要求范围
   if (!semver.satisfies(process.version, wanted)) {
     console.log(

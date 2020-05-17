@@ -3,15 +3,21 @@ module.exports = {
     es6: true,
     node: true
   },
-  extends: ['standard'],
+  extends: [
+    'standard'
+  ],
   globals: {
-    program: true,
     Atomics: 'readonly',
     SharedArrayBuffer: 'readonly'
   },
+  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 11,
     sourceType: 'module'
   },
-  rules: {}
+  plugins: [
+    '@typescript-eslint'
+  ],
+  rules: {
+  }
 }

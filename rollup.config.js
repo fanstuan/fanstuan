@@ -6,9 +6,9 @@ import nodeResolve from '@rollup/plugin-node-resolve'
 
 // console.log(pkg)
 export default {
-  input: 'packages/cli/lib/index.js',
+  input: 'packages/cli/lib/index.ts',
   output: {
-    file: 'packages/cli/bin/fantuan.js',
+    file: 'packages/cli/bin/fantuan.ts',
     format: 'es'
   },
   external: ['electron'],

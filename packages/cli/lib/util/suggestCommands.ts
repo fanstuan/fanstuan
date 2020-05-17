@@ -1,6 +1,7 @@
-import didYouMean from 'didyoumean2'// 简易的智能匹配引擎
-import program from 'commander'
-import chalk from 'chalk'
+import * as didYouMean from 'didyoumean2' // 简易的智能匹配引擎
+import * as program from 'commander'
+import * as chalk from 'chalk'
+
 export default function suggestCommands (cmd) {
   const avaliableCommands = program.commands.map(cmd => {
     return cmd._name

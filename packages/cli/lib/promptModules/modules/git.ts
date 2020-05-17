@@ -6,7 +6,6 @@ const choices = {
   'react-chat': 'github:baixiaoyu2997/react-chat',
   'vue-work': 'github:baixiaoyu2997/vue-work'
 }
-
 const prompt = [
   {
     type: 'list',
@@ -16,7 +15,7 @@ const prompt = [
   }
 ]
 
-const onPromptComplete = ({ answers, options }) => {
+const onPromptComplete: any = ({ answers }) => {
   return new Promise((resolve, reject) => {
     // TODO : 目前下载路径写死为当前目录
     download(choices[answers.git], answers.git, option, err => {
