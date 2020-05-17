@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 import os from 'os';
-import tty from 'tty';
 import events$1 from 'events';
 import child_process from 'child_process';
 import path$1 from 'path';
 import fs from 'fs';
+import tty from 'tty';
 import stream$2 from 'stream';
 import readline$1 from 'readline';
 import assert from 'assert';
 import util$8 from 'util';
-import buffer$3 from 'buffer';
+import buffer$5 from 'buffer';
 import string_decoder$1 from 'string_decoder';
 import crypto from 'crypto';
 import url from 'url';
@@ -41,6 +41,16 @@ function getCjsExportFromNamespace (n) {
 function commonjsRequire () {
 	throw new Error('Dynamic requires are not currently supported by @rollup/plugin-commonjs');
 }
+
+var matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
+
+var escapeStringRegexp = function (str) {
+	if (typeof str !== 'string') {
+		throw new TypeError('Expected a string');
+	}
+
+	return str.replace(matchOperatorsRe, '\\$&');
+};
 
 var colorName = {
 	"aliceblue": [240, 248, 255],
@@ -193,20 +203,22 @@ var colorName = {
 	"yellowgreen": [154, 205, 50]
 };
 
+var conversions = createCommonjsModule(function (module) {
 /* MIT license */
-/* eslint-disable no-mixed-operators */
 
 
 // NOTE: conversions should only return primitive values (i.e. arrays, or
 //       values that give correct `typeof` results).
 //       do not use box values types (i.e. Number(), String(), etc.)
 
-const reverseKeywords = {};
-for (const key of Object.keys(colorName)) {
-	reverseKeywords[colorName[key]] = key;
+var reverseKeywords = {};
+for (var key in colorName) {
+	if (colorName.hasOwnProperty(key)) {
+		reverseKeywords[colorName[key]] = key;
+	}
 }
 
-const convert = {
+var convert = module.exports = {
 	rgb: {channels: 3, labels: 'rgb'},
 	hsl: {channels: 3, labels: 'hsl'},
 	hsv: {channels: 3, labels: 'hsv'},
@@ -224,38 +236,40 @@ const convert = {
 	gray: {channels: 1, labels: ['gray']}
 };
 
-var conversions = convert;
+// hide .channels and .labels properties
+for (var model in convert) {
+	if (convert.hasOwnProperty(model)) {
+		if (!('channels' in convert[model])) {
+			throw new Error('missing channels property: ' + model);
+		}
 
-// Hide .channels and .labels properties
-for (const model of Object.keys(convert)) {
-	if (!('channels' in convert[model])) {
-		throw new Error('missing channels property: ' + model);
+		if (!('labels' in convert[model])) {
+			throw new Error('missing channel labels property: ' + model);
+		}
+
+		if (convert[model].labels.length !== convert[model].channels) {
+			throw new Error('channel and label counts mismatch: ' + model);
+		}
+
+		var channels = convert[model].channels;
+		var labels = convert[model].labels;
+		delete convert[model].channels;
+		delete convert[model].labels;
+		Object.defineProperty(convert[model], 'channels', {value: channels});
+		Object.defineProperty(convert[model], 'labels', {value: labels});
 	}
-
-	if (!('labels' in convert[model])) {
-		throw new Error('missing channel labels property: ' + model);
-	}
-
-	if (convert[model].labels.length !== convert[model].channels) {
-		throw new Error('channel and label counts mismatch: ' + model);
-	}
-
-	const {channels, labels} = convert[model];
-	delete convert[model].channels;
-	delete convert[model].labels;
-	Object.defineProperty(convert[model], 'channels', {value: channels});
-	Object.defineProperty(convert[model], 'labels', {value: labels});
 }
 
 convert.rgb.hsl = function (rgb) {
-	const r = rgb[0] / 255;
-	const g = rgb[1] / 255;
-	const b = rgb[2] / 255;
-	const min = Math.min(r, g, b);
-	const max = Math.max(r, g, b);
-	const delta = max - min;
-	let h;
-	let s;
+	var r = rgb[0] / 255;
+	var g = rgb[1] / 255;
+	var b = rgb[2] / 255;
+	var min = Math.min(r, g, b);
+	var max = Math.max(r, g, b);
+	var delta = max - min;
+	var h;
+	var s;
+	var l;
 
 	if (max === min) {
 		h = 0;
@@ -273,7 +287,7 @@ convert.rgb.hsl = function (rgb) {
 		h += 360;
 	}
 
-	const l = (min + max) / 2;
+	l = (min + max) / 2;
 
 	if (max === min) {
 		s = 0;
@@ -287,24 +301,23 @@ convert.rgb.hsl = function (rgb) {
 };
 
 convert.rgb.hsv = function (rgb) {
-	let rdif;
-	let gdif;
-	let bdif;
-	let h;
-	let s;
+	var rdif;
+	var gdif;
+	var bdif;
+	var h;
+	var s;
 
-	const r = rgb[0] / 255;
-	const g = rgb[1] / 255;
-	const b = rgb[2] / 255;
-	const v = Math.max(r, g, b);
-	const diff = v - Math.min(r, g, b);
-	const diffc = function (c) {
+	var r = rgb[0] / 255;
+	var g = rgb[1] / 255;
+	var b = rgb[2] / 255;
+	var v = Math.max(r, g, b);
+	var diff = v - Math.min(r, g, b);
+	var diffc = function (c) {
 		return (v - c) / 6 / diff + 1 / 2;
 	};
 
 	if (diff === 0) {
-		h = 0;
-		s = 0;
+		h = s = 0;
 	} else {
 		s = diff / v;
 		rdif = diffc(r);
@@ -318,7 +331,6 @@ convert.rgb.hsv = function (rgb) {
 		} else if (b === v) {
 			h = (2 / 3) + gdif - rdif;
 		}
-
 		if (h < 0) {
 			h += 1;
 		} else if (h > 1) {
@@ -334,11 +346,11 @@ convert.rgb.hsv = function (rgb) {
 };
 
 convert.rgb.hwb = function (rgb) {
-	const r = rgb[0];
-	const g = rgb[1];
-	let b = rgb[2];
-	const h = convert.rgb.hsl(rgb)[0];
-	const w = 1 / 255 * Math.min(r, Math.min(g, b));
+	var r = rgb[0];
+	var g = rgb[1];
+	var b = rgb[2];
+	var h = convert.rgb.hsl(rgb)[0];
+	var w = 1 / 255 * Math.min(r, Math.min(g, b));
 
 	b = 1 - 1 / 255 * Math.max(r, Math.max(g, b));
 
@@ -346,48 +358,54 @@ convert.rgb.hwb = function (rgb) {
 };
 
 convert.rgb.cmyk = function (rgb) {
-	const r = rgb[0] / 255;
-	const g = rgb[1] / 255;
-	const b = rgb[2] / 255;
+	var r = rgb[0] / 255;
+	var g = rgb[1] / 255;
+	var b = rgb[2] / 255;
+	var c;
+	var m;
+	var y;
+	var k;
 
-	const k = Math.min(1 - r, 1 - g, 1 - b);
-	const c = (1 - r - k) / (1 - k) || 0;
-	const m = (1 - g - k) / (1 - k) || 0;
-	const y = (1 - b - k) / (1 - k) || 0;
+	k = Math.min(1 - r, 1 - g, 1 - b);
+	c = (1 - r - k) / (1 - k) || 0;
+	m = (1 - g - k) / (1 - k) || 0;
+	y = (1 - b - k) / (1 - k) || 0;
 
 	return [c * 100, m * 100, y * 100, k * 100];
 };
 
+/**
+ * See https://en.m.wikipedia.org/wiki/Euclidean_distance#Squared_Euclidean_distance
+ * */
 function comparativeDistance(x, y) {
-	/*
-		See https://en.m.wikipedia.org/wiki/Euclidean_distance#Squared_Euclidean_distance
-	*/
 	return (
-		((x[0] - y[0]) ** 2) +
-		((x[1] - y[1]) ** 2) +
-		((x[2] - y[2]) ** 2)
+		Math.pow(x[0] - y[0], 2) +
+		Math.pow(x[1] - y[1], 2) +
+		Math.pow(x[2] - y[2], 2)
 	);
 }
 
 convert.rgb.keyword = function (rgb) {
-	const reversed = reverseKeywords[rgb];
+	var reversed = reverseKeywords[rgb];
 	if (reversed) {
 		return reversed;
 	}
 
-	let currentClosestDistance = Infinity;
-	let currentClosestKeyword;
+	var currentClosestDistance = Infinity;
+	var currentClosestKeyword;
 
-	for (const keyword of Object.keys(colorName)) {
-		const value = colorName[keyword];
+	for (var keyword in colorName) {
+		if (colorName.hasOwnProperty(keyword)) {
+			var value = colorName[keyword];
 
-		// Compute comparative distance
-		const distance = comparativeDistance(rgb, value);
+			// Compute comparative distance
+			var distance = comparativeDistance(rgb, value);
 
-		// Check if its less, if so set as closest
-		if (distance < currentClosestDistance) {
-			currentClosestDistance = distance;
-			currentClosestKeyword = keyword;
+			// Check if its less, if so set as closest
+			if (distance < currentClosestDistance) {
+				currentClosestDistance = distance;
+				currentClosestKeyword = keyword;
+			}
 		}
 	}
 
@@ -399,50 +417,55 @@ convert.keyword.rgb = function (keyword) {
 };
 
 convert.rgb.xyz = function (rgb) {
-	let r = rgb[0] / 255;
-	let g = rgb[1] / 255;
-	let b = rgb[2] / 255;
+	var r = rgb[0] / 255;
+	var g = rgb[1] / 255;
+	var b = rgb[2] / 255;
 
-	// Assume sRGB
-	r = r > 0.04045 ? (((r + 0.055) / 1.055) ** 2.4) : (r / 12.92);
-	g = g > 0.04045 ? (((g + 0.055) / 1.055) ** 2.4) : (g / 12.92);
-	b = b > 0.04045 ? (((b + 0.055) / 1.055) ** 2.4) : (b / 12.92);
+	// assume sRGB
+	r = r > 0.04045 ? Math.pow(((r + 0.055) / 1.055), 2.4) : (r / 12.92);
+	g = g > 0.04045 ? Math.pow(((g + 0.055) / 1.055), 2.4) : (g / 12.92);
+	b = b > 0.04045 ? Math.pow(((b + 0.055) / 1.055), 2.4) : (b / 12.92);
 
-	const x = (r * 0.4124) + (g * 0.3576) + (b * 0.1805);
-	const y = (r * 0.2126) + (g * 0.7152) + (b * 0.0722);
-	const z = (r * 0.0193) + (g * 0.1192) + (b * 0.9505);
+	var x = (r * 0.4124) + (g * 0.3576) + (b * 0.1805);
+	var y = (r * 0.2126) + (g * 0.7152) + (b * 0.0722);
+	var z = (r * 0.0193) + (g * 0.1192) + (b * 0.9505);
 
 	return [x * 100, y * 100, z * 100];
 };
 
 convert.rgb.lab = function (rgb) {
-	const xyz = convert.rgb.xyz(rgb);
-	let x = xyz[0];
-	let y = xyz[1];
-	let z = xyz[2];
+	var xyz = convert.rgb.xyz(rgb);
+	var x = xyz[0];
+	var y = xyz[1];
+	var z = xyz[2];
+	var l;
+	var a;
+	var b;
 
 	x /= 95.047;
 	y /= 100;
 	z /= 108.883;
 
-	x = x > 0.008856 ? (x ** (1 / 3)) : (7.787 * x) + (16 / 116);
-	y = y > 0.008856 ? (y ** (1 / 3)) : (7.787 * y) + (16 / 116);
-	z = z > 0.008856 ? (z ** (1 / 3)) : (7.787 * z) + (16 / 116);
+	x = x > 0.008856 ? Math.pow(x, 1 / 3) : (7.787 * x) + (16 / 116);
+	y = y > 0.008856 ? Math.pow(y, 1 / 3) : (7.787 * y) + (16 / 116);
+	z = z > 0.008856 ? Math.pow(z, 1 / 3) : (7.787 * z) + (16 / 116);
 
-	const l = (116 * y) - 16;
-	const a = 500 * (x - y);
-	const b = 200 * (y - z);
+	l = (116 * y) - 16;
+	a = 500 * (x - y);
+	b = 200 * (y - z);
 
 	return [l, a, b];
 };
 
 convert.hsl.rgb = function (hsl) {
-	const h = hsl[0] / 360;
-	const s = hsl[1] / 100;
-	const l = hsl[2] / 100;
-	let t2;
-	let t3;
-	let val;
+	var h = hsl[0] / 360;
+	var s = hsl[1] / 100;
+	var l = hsl[2] / 100;
+	var t1;
+	var t2;
+	var t3;
+	var rgb;
+	var val;
 
 	if (s === 0) {
 		val = l * 255;
@@ -455,15 +478,14 @@ convert.hsl.rgb = function (hsl) {
 		t2 = l + s - l * s;
 	}
 
-	const t1 = 2 * l - t2;
+	t1 = 2 * l - t2;
 
-	const rgb = [0, 0, 0];
-	for (let i = 0; i < 3; i++) {
+	rgb = [0, 0, 0];
+	for (var i = 0; i < 3; i++) {
 		t3 = h + 1 / 3 * -(i - 1);
 		if (t3 < 0) {
 			t3++;
 		}
-
 		if (t3 > 1) {
 			t3--;
 		}
@@ -485,31 +507,33 @@ convert.hsl.rgb = function (hsl) {
 };
 
 convert.hsl.hsv = function (hsl) {
-	const h = hsl[0];
-	let s = hsl[1] / 100;
-	let l = hsl[2] / 100;
-	let smin = s;
-	const lmin = Math.max(l, 0.01);
+	var h = hsl[0];
+	var s = hsl[1] / 100;
+	var l = hsl[2] / 100;
+	var smin = s;
+	var lmin = Math.max(l, 0.01);
+	var sv;
+	var v;
 
 	l *= 2;
 	s *= (l <= 1) ? l : 2 - l;
 	smin *= lmin <= 1 ? lmin : 2 - lmin;
-	const v = (l + s) / 2;
-	const sv = l === 0 ? (2 * smin) / (lmin + smin) : (2 * s) / (l + s);
+	v = (l + s) / 2;
+	sv = l === 0 ? (2 * smin) / (lmin + smin) : (2 * s) / (l + s);
 
 	return [h, sv * 100, v * 100];
 };
 
 convert.hsv.rgb = function (hsv) {
-	const h = hsv[0] / 60;
-	const s = hsv[1] / 100;
-	let v = hsv[2] / 100;
-	const hi = Math.floor(h) % 6;
+	var h = hsv[0] / 60;
+	var s = hsv[1] / 100;
+	var v = hsv[2] / 100;
+	var hi = Math.floor(h) % 6;
 
-	const f = h - Math.floor(h);
-	const p = 255 * v * (1 - s);
-	const q = 255 * v * (1 - (s * f));
-	const t = 255 * v * (1 - (s * (1 - f)));
+	var f = h - Math.floor(h);
+	var p = 255 * v * (1 - s);
+	var q = 255 * v * (1 - (s * f));
+	var t = 255 * v * (1 - (s * (1 - f)));
 	v *= 255;
 
 	switch (hi) {
@@ -529,15 +553,16 @@ convert.hsv.rgb = function (hsv) {
 };
 
 convert.hsv.hsl = function (hsv) {
-	const h = hsv[0];
-	const s = hsv[1] / 100;
-	const v = hsv[2] / 100;
-	const vmin = Math.max(v, 0.01);
-	let sl;
-	let l;
+	var h = hsv[0];
+	var s = hsv[1] / 100;
+	var v = hsv[2] / 100;
+	var vmin = Math.max(v, 0.01);
+	var lmin;
+	var sl;
+	var l;
 
 	l = (2 - s) * v;
-	const lmin = (2 - s) * vmin;
+	lmin = (2 - s) * vmin;
 	sl = s * vmin;
 	sl /= (lmin <= 1) ? lmin : 2 - lmin;
 	sl = sl || 0;
@@ -548,83 +573,87 @@ convert.hsv.hsl = function (hsv) {
 
 // http://dev.w3.org/csswg/css-color/#hwb-to-rgb
 convert.hwb.rgb = function (hwb) {
-	const h = hwb[0] / 360;
-	let wh = hwb[1] / 100;
-	let bl = hwb[2] / 100;
-	const ratio = wh + bl;
-	let f;
+	var h = hwb[0] / 360;
+	var wh = hwb[1] / 100;
+	var bl = hwb[2] / 100;
+	var ratio = wh + bl;
+	var i;
+	var v;
+	var f;
+	var n;
 
-	// Wh + bl cant be > 1
+	// wh + bl cant be > 1
 	if (ratio > 1) {
 		wh /= ratio;
 		bl /= ratio;
 	}
 
-	const i = Math.floor(6 * h);
-	const v = 1 - bl;
+	i = Math.floor(6 * h);
+	v = 1 - bl;
 	f = 6 * h - i;
 
 	if ((i & 0x01) !== 0) {
 		f = 1 - f;
 	}
 
-	const n = wh + f * (v - wh); // Linear interpolation
+	n = wh + f * (v - wh); // linear interpolation
 
-	let r;
-	let g;
-	let b;
-	/* eslint-disable max-statements-per-line,no-multi-spaces */
+	var r;
+	var g;
+	var b;
 	switch (i) {
 		default:
 		case 6:
-		case 0: r = v;  g = n;  b = wh; break;
-		case 1: r = n;  g = v;  b = wh; break;
-		case 2: r = wh; g = v;  b = n; break;
-		case 3: r = wh; g = n;  b = v; break;
-		case 4: r = n;  g = wh; b = v; break;
-		case 5: r = v;  g = wh; b = n; break;
+		case 0: r = v; g = n; b = wh; break;
+		case 1: r = n; g = v; b = wh; break;
+		case 2: r = wh; g = v; b = n; break;
+		case 3: r = wh; g = n; b = v; break;
+		case 4: r = n; g = wh; b = v; break;
+		case 5: r = v; g = wh; b = n; break;
 	}
-	/* eslint-enable max-statements-per-line,no-multi-spaces */
 
 	return [r * 255, g * 255, b * 255];
 };
 
 convert.cmyk.rgb = function (cmyk) {
-	const c = cmyk[0] / 100;
-	const m = cmyk[1] / 100;
-	const y = cmyk[2] / 100;
-	const k = cmyk[3] / 100;
+	var c = cmyk[0] / 100;
+	var m = cmyk[1] / 100;
+	var y = cmyk[2] / 100;
+	var k = cmyk[3] / 100;
+	var r;
+	var g;
+	var b;
 
-	const r = 1 - Math.min(1, c * (1 - k) + k);
-	const g = 1 - Math.min(1, m * (1 - k) + k);
-	const b = 1 - Math.min(1, y * (1 - k) + k);
+	r = 1 - Math.min(1, c * (1 - k) + k);
+	g = 1 - Math.min(1, m * (1 - k) + k);
+	b = 1 - Math.min(1, y * (1 - k) + k);
 
 	return [r * 255, g * 255, b * 255];
 };
 
 convert.xyz.rgb = function (xyz) {
-	const x = xyz[0] / 100;
-	const y = xyz[1] / 100;
-	const z = xyz[2] / 100;
-	let r;
-	let g;
-	let b;
+	var x = xyz[0] / 100;
+	var y = xyz[1] / 100;
+	var z = xyz[2] / 100;
+	var r;
+	var g;
+	var b;
 
 	r = (x * 3.2406) + (y * -1.5372) + (z * -0.4986);
 	g = (x * -0.9689) + (y * 1.8758) + (z * 0.0415);
 	b = (x * 0.0557) + (y * -0.2040) + (z * 1.0570);
 
-	// Assume sRGB
+	// assume sRGB
 	r = r > 0.0031308
-		? ((1.055 * (r ** (1.0 / 2.4))) - 0.055)
+		? ((1.055 * Math.pow(r, 1.0 / 2.4)) - 0.055)
 		: r * 12.92;
 
 	g = g > 0.0031308
-		? ((1.055 * (g ** (1.0 / 2.4))) - 0.055)
+		? ((1.055 * Math.pow(g, 1.0 / 2.4)) - 0.055)
 		: g * 12.92;
 
 	b = b > 0.0031308
-		? ((1.055 * (b ** (1.0 / 2.4))) - 0.055)
+		? ((1.055 * Math.pow(b, 1.0 / 2.4)) - 0.055)
 		: b * 12.92;
 
 	r = Math.min(Math.max(0, r), 1);
@@ -635,40 +664,43 @@ convert.xyz.rgb = function (xyz) {
 };
 
 convert.xyz.lab = function (xyz) {
-	let x = xyz[0];
-	let y = xyz[1];
-	let z = xyz[2];
+	var x = xyz[0];
+	var y = xyz[1];
+	var z = xyz[2];
+	var l;
+	var a;
+	var b;
 
 	x /= 95.047;
 	y /= 100;
 	z /= 108.883;
 
-	x = x > 0.008856 ? (x ** (1 / 3)) : (7.787 * x) + (16 / 116);
-	y = y > 0.008856 ? (y ** (1 / 3)) : (7.787 * y) + (16 / 116);
-	z = z > 0.008856 ? (z ** (1 / 3)) : (7.787 * z) + (16 / 116);
+	x = x > 0.008856 ? Math.pow(x, 1 / 3) : (7.787 * x) + (16 / 116);
+	y = y > 0.008856 ? Math.pow(y, 1 / 3) : (7.787 * y) + (16 / 116);
+	z = z > 0.008856 ? Math.pow(z, 1 / 3) : (7.787 * z) + (16 / 116);
 
-	const l = (116 * y) - 16;
-	const a = 500 * (x - y);
-	const b = 200 * (y - z);
+	l = (116 * y) - 16;
+	a = 500 * (x - y);
+	b = 200 * (y - z);
 
 	return [l, a, b];
 };
 
 convert.lab.xyz = function (lab) {
-	const l = lab[0];
-	const a = lab[1];
-	const b = lab[2];
-	let x;
-	let y;
-	let z;
+	var l = lab[0];
+	var a = lab[1];
+	var b = lab[2];
+	var x;
+	var y;
+	var z;
 
 	y = (l + 16) / 116;
 	x = a / 500 + y;
 	z = y - b / 200;
 
-	const y2 = y ** 3;
-	const x2 = x ** 3;
-	const z2 = z ** 3;
+	var y2 = Math.pow(y, 3);
+	var x2 = Math.pow(x, 3);
+	var z2 = Math.pow(z, 3);
 	y = y2 > 0.008856 ? y2 : (y - 16 / 116) / 7.787;
 	x = x2 > 0.008856 ? x2 : (x - 16 / 116) / 7.787;
 	z = z2 > 0.008856 ? z2 : (z - 16 / 116) / 7.787;
@@ -681,38 +713,45 @@ convert.lab.xyz = function (lab) {
 };
 
 convert.lab.lch = function (lab) {
-	const l = lab[0];
-	const a = lab[1];
-	const b = lab[2];
-	let h;
+	var l = lab[0];
+	var a = lab[1];
+	var b = lab[2];
+	var hr;
+	var h;
+	var c;
 
-	const hr = Math.atan2(b, a);
+	hr = Math.atan2(b, a);
 	h = hr * 360 / 2 / Math.PI;
 
 	if (h < 0) {
 		h += 360;
 	}
 
-	const c = Math.sqrt(a * a + b * b);
+	c = Math.sqrt(a * a + b * b);
 
 	return [l, c, h];
 };
 
 convert.lch.lab = function (lch) {
-	const l = lch[0];
-	const c = lch[1];
-	const h = lch[2];
+	var l = lch[0];
+	var c = lch[1];
+	var h = lch[2];
+	var a;
+	var b;
+	var hr;
 
-	const hr = h / 360 * 2 * Math.PI;
-	const a = c * Math.cos(hr);
-	const b = c * Math.sin(hr);
+	hr = h / 360 * 2 * Math.PI;
+	a = c * Math.cos(hr);
+	b = c * Math.sin(hr);
 
 	return [l, a, b];
 };
 
-convert.rgb.ansi16 = function (args, saturation = null) {
-	const [r, g, b] = args;
-	let value = saturation === null ? convert.rgb.hsv(args)[2] : saturation; // Hsv -> ansi16 optimization
+convert.rgb.ansi16 = function (args) {
+	var r = args[0];
+	var g = args[1];
+	var b = args[2];
+	var value = 1 in arguments ? arguments[1] : convert.rgb.hsv(args)[2]; // hsv -> ansi16 optimization
 
 	value = Math.round(value / 50);
 
@@ -720,7 +759,7 @@ convert.rgb.ansi16 = function (args, saturation = null) {
 		return 30;
 	}
 
-	let ansi = 30
+	var ansi = 30
 		+ ((Math.round(b / 255) << 2)
 		| (Math.round(g / 255) << 1)
 		| Math.round(r / 255));
@@ -733,17 +772,17 @@ convert.rgb.ansi16 = function (args, saturation = null) {
 };
 
 convert.hsv.ansi16 = function (args) {
-	// Optimization here; we already know the value and don't need to get
+	// optimization here; we already know the value and don't need to get
 	// it converted for us.
 	return convert.rgb.ansi16(convert.hsv.rgb(args), args[2]);
 };
 
 convert.rgb.ansi256 = function (args) {
-	const r = args[0];
-	const g = args[1];
-	const b = args[2];
+	var r = args[0];
+	var g = args[1];
+	var b = args[2];
 
-	// We use the extended greyscale palette here, with the exception of
+	// we use the extended greyscale palette here, with the exception of
 	// black and white. normal palette only has 4 greyscale shades.
 	if (r === g && g === b) {
 		if (r < 8) {
@@ -757,7 +796,7 @@ convert.rgb.ansi256 = function (args) {
 		return Math.round(((r - 8) / 247) * 24) + 232;
 	}
 
-	const ansi = 16
+	var ansi = 16
 		+ (36 * Math.round(r / 255 * 5))
 		+ (6 * Math.round(g / 255 * 5))
 		+ Math.round(b / 255 * 5);
@@ -766,9 +805,9 @@ convert.rgb.ansi256 = function (args) {
 };
 
 convert.ansi16.rgb = function (args) {
-	let color = args % 10;
+	var color = args % 10;
 
-	// Handle greyscale
+	// handle greyscale
 	if (color === 0 || color === 7) {
 		if (args > 50) {
 			color += 3.5;
@@ -779,71 +818,71 @@ convert.ansi16.rgb = function (args) {
 		return [color, color, color];
 	}
 
-	const mult = (~~(args > 50) + 1) * 0.5;
-	const r = ((color & 1) * mult) * 255;
-	const g = (((color >> 1) & 1) * mult) * 255;
-	const b = (((color >> 2) & 1) * mult) * 255;
+	var mult = (~~(args > 50) + 1) * 0.5;
+	var r = ((color & 1) * mult) * 255;
+	var g = (((color >> 1) & 1) * mult) * 255;
+	var b = (((color >> 2) & 1) * mult) * 255;
 
 	return [r, g, b];
 };
 
 convert.ansi256.rgb = function (args) {
-	// Handle greyscale
+	// handle greyscale
 	if (args >= 232) {
-		const c = (args - 232) * 10 + 8;
+		var c = (args - 232) * 10 + 8;
 		return [c, c, c];
 	}
 
 	args -= 16;
 
-	let rem;
-	const r = Math.floor(args / 36) / 5 * 255;
-	const g = Math.floor((rem = args % 36) / 6) / 5 * 255;
-	const b = (rem % 6) / 5 * 255;
+	var rem;
+	var r = Math.floor(args / 36) / 5 * 255;
+	var g = Math.floor((rem = args % 36) / 6) / 5 * 255;
+	var b = (rem % 6) / 5 * 255;
 
 	return [r, g, b];
 };
 
 convert.rgb.hex = function (args) {
-	const integer = ((Math.round(args[0]) & 0xFF) << 16)
+	var integer = ((Math.round(args[0]) & 0xFF) << 16)
 		+ ((Math.round(args[1]) & 0xFF) << 8)
 		+ (Math.round(args[2]) & 0xFF);
 
-	const string = integer.toString(16).toUpperCase();
+	var string = integer.toString(16).toUpperCase();
 	return '000000'.substring(string.length) + string;
 };
 
 convert.hex.rgb = function (args) {
-	const match = args.toString(16).match(/[a-f0-9]{6}|[a-f0-9]{3}/i);
+	var match = args.toString(16).match(/[a-f0-9]{6}|[a-f0-9]{3}/i);
 	if (!match) {
 		return [0, 0, 0];
 	}
 
-	let colorString = match[0];
+	var colorString = match[0];
 
 	if (match[0].length === 3) {
-		colorString = colorString.split('').map(char => {
+		colorString = colorString.split('').map(function (char) {
 			return char + char;
 		}).join('');
 	}
 
-	const integer = parseInt(colorString, 16);
-	const r = (integer >> 16) & 0xFF;
-	const g = (integer >> 8) & 0xFF;
-	const b = integer & 0xFF;
+	var integer = parseInt(colorString, 16);
+	var r = (integer >> 16) & 0xFF;
+	var g = (integer >> 8) & 0xFF;
+	var b = integer & 0xFF;
 
 	return [r, g, b];
 };
 
 convert.rgb.hcg = function (rgb) {
-	const r = rgb[0] / 255;
-	const g = rgb[1] / 255;
-	const b = rgb[2] / 255;
-	const max = Math.max(Math.max(r, g), b);
-	const min = Math.min(Math.min(r, g), b);
-	const chroma = (max - min);
-	let grayscale;
-	let hue;
+	var r = rgb[0] / 255;
+	var g = rgb[1] / 255;
+	var b = rgb[2] / 255;
+	var max = Math.max(Math.max(r, g), b);
+	var min = Math.min(Math.min(r, g), b);
+	var chroma = (max - min);
+	var grayscale;
+	var hue;
 
 	if (chroma < 1) {
 		grayscale = min / (1 - chroma);
@@ -860,7 +899,7 @@ convert.rgb.hcg = function (rgb) {
 	if (max === g) {
 		hue = 2 + (b - r) / chroma;
 	} else {
-		hue = 4 + (r - g) / chroma;
+		hue = 4 + (r - g) / chroma + 4;
 	}
 
 	hue /= 6;
@@ -870,12 +909,17 @@ convert.rgb.hcg = function (rgb) {
 };
 
 convert.hsl.hcg = function (hsl) {
-	const s = hsl[1] / 100;
-	const l = hsl[2] / 100;
+	var s = hsl[1] / 100;
+	var l = hsl[2] / 100;
+	var c = 1;
+	var f = 0;
 
-	const c = l < 0.5 ? (2.0 * s * l) : (2.0 * s * (1.0 - l));
+	if (l < 0.5) {
+		c = 2.0 * s * l;
+	} else {
+		c = 2.0 * s * (1.0 - l);
+	}
 
-	let f = 0;
 	if (c < 1.0) {
 		f = (l - 0.5 * c) / (1.0 - c);
 	}
@@ -884,11 +928,11 @@ convert.hsl.hcg = function (hsl) {
 };
 
 convert.hsv.hcg = function (hsv) {
-	const s = hsv[1] / 100;
-	const v = hsv[2] / 100;
+	var s = hsv[1] / 100;
+	var v = hsv[2] / 100;
 
-	const c = s * v;
-	let f = 0;
+	var c = s * v;
+	var f = 0;
 
 	if (c < 1.0) {
 		f = (v - c) / (1 - c);
@@ -898,21 +942,20 @@ convert.hsv.hcg = function (hsv) {
 };
 
 convert.hcg.rgb = function (hcg) {
-	const h = hcg[0] / 360;
-	const c = hcg[1] / 100;
-	const g = hcg[2] / 100;
+	var h = hcg[0] / 360;
+	var c = hcg[1] / 100;
+	var g = hcg[2] / 100;
 
 	if (c === 0.0) {
 		return [g * 255, g * 255, g * 255];
 	}
 
-	const pure = [0, 0, 0];
-	const hi = (h % 1) * 6;
-	const v = hi % 1;
-	const w = 1 - v;
-	let mg = 0;
+	var pure = [0, 0, 0];
+	var hi = (h % 1) * 6;
+	var v = hi % 1;
+	var w = 1 - v;
+	var mg = 0;
 
-	/* eslint-disable max-statements-per-line */
 	switch (Math.floor(hi)) {
 		case 0:
 			pure[0] = 1; pure[1] = v; pure[2] = 0; break;
@@ -927,7 +970,6 @@ convert.hcg.rgb = function (hcg) {
 		default:
 			pure[0] = 1; pure[1] = 0; pure[2] = w;
 	}
-	/* eslint-enable max-statements-per-line */
 
 	mg = (1.0 - c) * g;
 
@@ -939,11 +981,11 @@ convert.hcg.rgb = function (hcg) {
 };
 
 convert.hcg.hsv = function (hcg) {
-	const c = hcg[1] / 100;
-	const g = hcg[2] / 100;
+	var c = hcg[1] / 100;
+	var g = hcg[2] / 100;
 
-	const v = c + g * (1.0 - c);
-	let f = 0;
+	var v = c + g * (1.0 - c);
+	var f = 0;
 
 	if (v > 0.0) {
 		f = c / v;
@@ -953,11 +995,11 @@ convert.hcg.hsv = function (hcg) {
 };
 
 convert.hcg.hsl = function (hcg) {
-	const c = hcg[1] / 100;
-	const g = hcg[2] / 100;
+	var c = hcg[1] / 100;
+	var g = hcg[2] / 100;
 
-	const l = g * (1.0 - c) + 0.5 * c;
-	let s = 0;
+	var l = g * (1.0 - c) + 0.5 * c;
+	var s = 0;
 
 	if (l > 0.0 && l < 0.5) {
 		s = c / (2 * l);
@@ -970,18 +1012,18 @@ convert.hcg.hsl = function (hcg) {
 };
 
 convert.hcg.hwb = function (hcg) {
-	const c = hcg[1] / 100;
-	const g = hcg[2] / 100;
-	const v = c + g * (1.0 - c);
+	var c = hcg[1] / 100;
+	var g = hcg[2] / 100;
+	var v = c + g * (1.0 - c);
 	return [hcg[0], (v - c) * 100, (1 - v) * 100];
 };
 
 convert.hwb.hcg = function (hwb) {
-	const w = hwb[1] / 100;
-	const b = hwb[2] / 100;
-	const v = 1 - b;
-	const c = v - w;
-	let g = 0;
+	var w = hwb[1] / 100;
+	var b = hwb[2] / 100;
+	var v = 1 - b;
+	var c = v - w;
+	var g = 0;
 
 	if (c < 1) {
 		g = (v - c) / (1 - c);
@@ -1002,11 +1044,9 @@ convert.gray.rgb = function (args) {
 	return [args[0] / 100 * 255, args[0] / 100 * 255, args[0] / 100 * 255];
 };
 
-convert.gray.hsl = function (args) {
+convert.gray.hsl = convert.gray.hsv = function (args) {
 	return [0, 0, args[0]];
 };
-
-convert.gray.hsv = convert.gray.hsl;
 
 convert.gray.hwb = function (gray) {
 	return [0, 100, gray[0]];
@@ -1021,20 +1061,36 @@ convert.gray.lab = function (gray) {
 };
 
 convert.gray.hex = function (gray) {
-	const val = Math.round(gray[0] / 100 * 255) & 0xFF;
-	const integer = (val << 16) + (val << 8) + val;
+	var val = Math.round(gray[0] / 100 * 255) & 0xFF;
+	var integer = (val << 16) + (val << 8) + val;
 
-	const string = integer.toString(16).toUpperCase();
+	var string = integer.toString(16).toUpperCase();
 	return '000000'.substring(string.length) + string;
 };
 
 convert.rgb.gray = function (rgb) {
-	const val = (rgb[0] + rgb[1] + rgb[2]) / 3;
+	var val = (rgb[0] + rgb[1] + rgb[2]) / 3;
 	return [val / 255 * 100];
 };
+});
+var conversions_1 = conversions.rgb;
+var conversions_2 = conversions.hsl;
+var conversions_3 = conversions.hsv;
+var conversions_4 = conversions.hwb;
+var conversions_5 = conversions.cmyk;
+var conversions_6 = conversions.xyz;
+var conversions_7 = conversions.lab;
+var conversions_8 = conversions.lch;
+var conversions_9 = conversions.hex;
+var conversions_10 = conversions.keyword;
+var conversions_11 = conversions.ansi16;
+var conversions_12 = conversions.ansi256;
+var conversions_13 = conversions.hcg;
+var conversions_14 = conversions.apple;
+var conversions_15 = conversions.gray;
 
 /*
-	This function routes a model to all other models.
+	this function routes a model to all other models.
 
 	all functions that are routed have a property `.conversion` attached
 	to the returned synthetic function. This property is an array
@@ -1045,11 +1101,11 @@ convert.rgb.gray = function (rgb) {
 */
 
 function buildGraph() {
-	const graph = {};
+	var graph = {};
 	// https://jsperf.com/object-keys-vs-for-in-with-closure/3
-	const models = Object.keys(conversions);
+	var models = Object.keys(conversions);
 
-	for (let len = models.length, i = 0; i < len; i++) {
+	for (var len = models.length, i = 0; i < len; i++) {
 		graph[models[i]] = {
 			// http://jsperf.com/1-vs-infinity
 			// micro-opt, but this is simple.
@@ -1063,18 +1119,18 @@ function buildGraph() {
 
 // https://en.wikipedia.org/wiki/Breadth-first_search
 function deriveBFS(fromModel) {
-	const graph = buildGraph();
-	const queue = [fromModel]; // Unshift -> queue -> pop
+	var graph = buildGraph();
+	var queue = [fromModel]; // unshift -> queue -> pop
 
 	graph[fromModel].distance = 0;
 
 	while (queue.length) {
-		const current = queue.pop();
-		const adjacents = Object.keys(conversions[current]);
+		var current = queue.pop();
+		var adjacents = Object.keys(conversions[current]);
 
-		for (let len = adjacents.length, i = 0; i < len; i++) {
-			const adjacent = adjacents[i];
-			const node = graph[adjacent];
+		for (var len = adjacents.length, i = 0; i < len; i++) {
+			var adjacent = adjacents[i];
+			var node = graph[adjacent];
 
 			if (node.distance === -1) {
 				node.distance = graph[current].distance + 1;
@@ -1094,10 +1150,10 @@ function link(from, to) {
 }
 
 function wrapConversion(toModel, graph) {
-	const path = [graph[toModel].parent, toModel];
-	let fn = conversions[graph[toModel].parent][toModel];
+	var path = [graph[toModel].parent, toModel];
+	var fn = conversions[graph[toModel].parent][toModel];
 
-	let cur = graph[toModel].parent;
+	var cur = graph[toModel].parent;
 	while (graph[cur].parent) {
 		path.unshift(graph[cur].parent);
 		fn = link(conversions[graph[cur].parent][cur], fn);
@@ -1109,16 +1165,16 @@ function wrapConversion(toModel, graph) {
 }
 
 var route = function (fromModel) {
-	const graph = deriveBFS(fromModel);
-	const conversion = {};
+	var graph = deriveBFS(fromModel);
+	var conversion = {};
 
-	const models = Object.keys(graph);
-	for (let len = models.length, i = 0; i < len; i++) {
-		const toModel = models[i];
-		const node = graph[toModel];
+	var models = Object.keys(graph);
+	for (var len = models.length, i = 0; i < len; i++) {
+		var toModel = models[i];
+		var node = graph[toModel];
 
 		if (node.parent === null) {
-			// No possible conversion, or this node is the source model.
+			// no possible conversion, or this node is the source model.
 			continue;
 		}
 
@@ -1128,25 +1184,24 @@ var route = function (fromModel) {
 	return conversion;
 };
 
-const convert$1 = {};
+var convert = {};
 
-const models = Object.keys(conversions);
+var models = Object.keys(conversions);
 
 function wrapRaw(fn) {
-	const wrappedFn = function (...args) {
-		const arg0 = args[0];
-		if (arg0 === undefined || arg0 === null) {
-			return arg0;
+	var wrappedFn = function (args) {
+		if (args === undefined || args === null) {
+			return args;
 		}
 
-		if (arg0.length > 1) {
-			args = arg0;
+		if (arguments.length > 1) {
+			args = Array.prototype.slice.call(arguments);
 		}
 
 		return fn(args);
 	};
 
-	// Preserve .conversion property if there is one
+	// preserve .conversion property if there is one
 	if ('conversion' in fn) {
 		wrappedFn.conversion = fn.conversion;
 	}
@@ -1155,24 +1210,22 @@ function wrapRaw(fn) {
 }
 
 function wrapRounded(fn) {
-	const wrappedFn = function (...args) {
-		const arg0 = args[0];
-
-		if (arg0 === undefined || arg0 === null) {
-			return arg0;
+	var wrappedFn = function (args) {
+		if (args === undefined || args === null) {
+			return args;
 		}
 
-		if (arg0.length > 1) {
-			args = arg0;
+		if (arguments.length > 1) {
+			args = Array.prototype.slice.call(arguments);
 		}
 
-		const result = fn(args);
+		var result = fn(args);
 
-		// We're assuming the result is an array here.
+		// we're assuming the result is an array here.
 		// see notice in conversions.js; don't use box types
 		// in conversion functions.
 		if (typeof result === 'object') {
-			for (let len = result.length, i = 0; i < len; i++) {
+			for (var len = result.length, i = 0; i < len; i++) {
 				result[i] = Math.round(result[i]);
 			}
 		}
@@ -1180,7 +1233,7 @@ function wrapRounded(fn) {
 		return result;
 	};
 
-	// Preserve .conversion property if there is one
+	// preserve .conversion property if there is one
 	if ('conversion' in fn) {
 		wrappedFn.conversion = fn.conversion;
 	}
@@ -1188,83 +1241,41 @@ function wrapRounded(fn) {
 	return wrappedFn;
 }
 
-models.forEach(fromModel => {
-	convert$1[fromModel] = {};
+models.forEach(function (fromModel) {
+	convert[fromModel] = {};
 
-	Object.defineProperty(convert$1[fromModel], 'channels', {value: conversions[fromModel].channels});
-	Object.defineProperty(convert$1[fromModel], 'labels', {value: conversions[fromModel].labels});
+	Object.defineProperty(convert[fromModel], 'channels', {value: conversions[fromModel].channels});
+	Object.defineProperty(convert[fromModel], 'labels', {value: conversions[fromModel].labels});
 
-	const routes = route(fromModel);
-	const routeModels = Object.keys(routes);
+	var routes = route(fromModel);
+	var routeModels = Object.keys(routes);
 
-	routeModels.forEach(toModel => {
-		const fn = routes[toModel];
+	routeModels.forEach(function (toModel) {
+		var fn = routes[toModel];
 
-		convert$1[fromModel][toModel] = wrapRounded(fn);
-		convert$1[fromModel][toModel].raw = wrapRaw(fn);
+		convert[fromModel][toModel] = wrapRounded(fn);
+		convert[fromModel][toModel].raw = wrapRaw(fn);
 	});
 });
 
-var colorConvert = convert$1;
+var colorConvert = convert;
 
 var ansiStyles = createCommonjsModule(function (module) {
 
-const wrapAnsi16 = (fn, offset) => (...args) => {
-	const code = fn(...args);
+
+const wrapAnsi16 = (fn, offset) => function () {
+	const code = fn.apply(colorConvert, arguments);
 	return `\u001B[${code + offset}m`;
 };
 
-const wrapAnsi256 = (fn, offset) => (...args) => {
-	const code = fn(...args);
+const wrapAnsi256 = (fn, offset) => function () {
+	const code = fn.apply(colorConvert, arguments);
 	return `\u001B[${38 + offset};5;${code}m`;
 };
 
-const wrapAnsi16m = (fn, offset) => (...args) => {
-	const rgb = fn(...args);
+const wrapAnsi16m = (fn, offset) => function () {
+	const rgb = fn.apply(colorConvert, arguments);
 	return `\u001B[${38 + offset};2;${rgb[0]};${rgb[1]};${rgb[2]}m`;
-};
-
-const ansi2ansi = n => n;
-const rgb2rgb = (r, g, b) => [r, g, b];
-
-const setLazyProperty = (object, property, get) => {
-	Object.defineProperty(object, property, {
-		get: () => {
-			const value = get();
-
-			Object.defineProperty(object, property, {
-				value,
-				enumerable: true,
-				configurable: true
-			});
-
-			return value;
-		},
-		enumerable: true,
-		configurable: true
-	});
-};
-
-/** @type {typeof import('color-convert')} */
-let colorConvert$1;
-const makeDynamicStyles = (wrap, targetSpace, identity, isBackground) => {
-	if (colorConvert$1 === undefined) {
-		colorConvert$1 = colorConvert;
-	}
-
-	const offset = isBackground ? 10 : 0;
-	const styles = {};
-
-	for (const [sourceSpace, suite] of Object.entries(colorConvert$1)) {
-		const name = sourceSpace === 'ansi16' ? 'ansi' : sourceSpace;
-		if (sourceSpace === targetSpace) {
-			styles[name] = wrap(identity, offset);
-		} else if (typeof suite === 'object') {
-			styles[name] = wrap(suite[targetSpace], offset);
-		}
-	}
-
-	return styles;
 };
 
 function assembleStyles() {
@@ -1290,9 +1301,9 @@ function assembleStyles() {
 			magenta: [35, 39],
 			cyan: [36, 39],
 			white: [37, 39],
+			gray: [90, 39],
 
 			// Bright color
-			blackBright: [90, 39],
 			redBright: [91, 39],
 			greenBright: [92, 39],
 			yellowBright: [93, 39],
@@ -1323,14 +1334,15 @@ function assembleStyles() {
 		}
 	};
 
-	// Alias bright black as gray (and grey)
-	styles.color.gray = styles.color.blackBright;
-	styles.bgColor.bgGray = styles.bgColor.bgBlackBright;
-	styles.color.grey = styles.color.blackBright;
-	styles.bgColor.bgGrey = styles.bgColor.bgBlackBright;
+	// Fix humans
+	styles.color.grey = styles.color.gray;
 
-	for (const [groupName, group] of Object.entries(styles)) {
-		for (const [styleName, style] of Object.entries(group)) {
+	for (const groupName of Object.keys(styles)) {
+		const group = styles[groupName];
+
+		for (const styleName of Object.keys(group)) {
+			const style = group[styleName];
+
 			styles[styleName] = {
 				open: `\u001B[${style[0]}m`,
 				close: `\u001B[${style[1]}m`
@@ -1345,22 +1357,65 @@ function assembleStyles() {
 			value: group,
 			enumerable: false
 		});
+
+		Object.defineProperty(styles, 'codes', {
+			value: codes,
+			enumerable: false
+		});
 	}
 
-	Object.defineProperty(styles, 'codes', {
-		value: codes,
-		enumerable: false
-	});
+	const ansi2ansi = n => n;
+	const rgb2rgb = (r, g, b) => [r, g, b];
 
 	styles.color.close = '\u001B[39m';
 	styles.bgColor.close = '\u001B[49m';
 
-	setLazyProperty(styles.color, 'ansi', () => makeDynamicStyles(wrapAnsi16, 'ansi16', ansi2ansi, false));
-	setLazyProperty(styles.color, 'ansi256', () => makeDynamicStyles(wrapAnsi256, 'ansi256', ansi2ansi, false));
-	setLazyProperty(styles.color, 'ansi16m', () => makeDynamicStyles(wrapAnsi16m, 'rgb', rgb2rgb, false));
-	setLazyProperty(styles.bgColor, 'ansi', () => makeDynamicStyles(wrapAnsi16, 'ansi16', ansi2ansi, true));
-	setLazyProperty(styles.bgColor, 'ansi256', () => makeDynamicStyles(wrapAnsi256, 'ansi256', ansi2ansi, true));
-	setLazyProperty(styles.bgColor, 'ansi16m', () => makeDynamicStyles(wrapAnsi16m, 'rgb', rgb2rgb, true));
+	styles.color.ansi = {
+		ansi: wrapAnsi16(ansi2ansi, 0)
+	};
+	styles.color.ansi256 = {
+		ansi256: wrapAnsi256(ansi2ansi, 0)
+	};
+	styles.color.ansi16m = {
+		rgb: wrapAnsi16m(rgb2rgb, 0)
+	};
+
+	styles.bgColor.ansi = {
+		ansi: wrapAnsi16(ansi2ansi, 10)
+	};
+	styles.bgColor.ansi256 = {
+		ansi256: wrapAnsi256(ansi2ansi, 10)
+	};
+	styles.bgColor.ansi16m = {
+		rgb: wrapAnsi16m(rgb2rgb, 10)
+	};
+
+	for (let key of Object.keys(colorConvert)) {
+		if (typeof colorConvert[key] !== 'object') {
+			continue;
+		}
+
+		const suite = colorConvert[key];
+
+		if (key === 'ansi16') {
+			key = 'ansi';
+		}
+
+		if ('ansi16' in suite) {
+			styles.color.ansi[key] = wrapAnsi16(suite.ansi16, 0);
+			styles.bgColor.ansi[key] = wrapAnsi16(suite.ansi16, 10);
+		}
+
+		if ('ansi256' in suite) {
+			styles.color.ansi256[key] = wrapAnsi256(suite.ansi256, 0);
+			styles.bgColor.ansi256[key] = wrapAnsi256(suite.ansi256, 10);
+		}
+
+		if ('rgb' in suite) {
+			styles.color.ansi16m[key] = wrapAnsi16m(suite.rgb, 0);
+			styles.bgColor.ansi16m[key] = wrapAnsi16m(suite.rgb, 10);
+		}
+	}
 
 	return styles;
 }
@@ -1372,36 +1427,29 @@ Object.defineProperty(module, 'exports', {
 });
 });
 
-var hasFlag = (flag, argv = process.argv) => {
+var hasFlag = (flag, argv) => {
+	argv = argv || process.argv;
 	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+	const pos = argv.indexOf(prefix + flag);
+	const terminatorPos = argv.indexOf('--');
+	return pos !== -1 && (terminatorPos === -1 ? true : pos < terminatorPos);
 };
 
-const {env} = process;
+const env = process.env;
 
 let forceColor;
 if (hasFlag('no-color') ||
 	hasFlag('no-colors') ||
-	hasFlag('color=false') ||
-	hasFlag('color=never')) {
-	forceColor = 0;
+	hasFlag('color=false')) {
+	forceColor = false;
 } else if (hasFlag('color') ||
 	hasFlag('colors') ||
 	hasFlag('color=true') ||
 	hasFlag('color=always')) {
-	forceColor = 1;
+	forceColor = true;
 }
-
 if ('FORCE_COLOR' in env) {
-	if (env.FORCE_COLOR === 'true') {
-		forceColor = 1;
-	} else if (env.FORCE_COLOR === 'false') {
-		forceColor = 0;
-	} else {
-		forceColor = env.FORCE_COLOR.length === 0 ? 1 : Math.min(parseInt(env.FORCE_COLOR, 10), 3);
-	}
+	forceColor = env.FORCE_COLOR.length === 0 || parseInt(env.FORCE_COLOR, 10) !== 0;
 }
 
 function translateLevel(level) {
@@ -1417,8 +1465,8 @@ function translateLevel(level) {
 	};
 }
 
-function supportsColor(haveStream, streamIsTTY) {
-	if (forceColor === 0) {
+function supportsColor(stream) {
+	if (forceColor === false) {
 		return 0;
 	}
 
@@ -1432,21 +1480,22 @@ function supportsColor(haveStream, streamIsTTY) {
 		return 2;
 	}
 
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
+	if (stream && !stream.isTTY && forceColor !== true) {
 		return 0;
 	}
 
-	const min = forceColor || 0;
-
-	if (env.TERM === 'dumb') {
-		return min;
-	}
+	const min = forceColor ? 1 : 0;
 
 	if (process.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+		// Node.js 7.5.0 is the first version of Node.js to include a patch to
+		// libuv that enables 256 color output on Windows. Anything earlier and it
+		// won't work. However, here we target Node.js 8 at minimum as it is an LTS
+		// release, and Node.js 7 is not. Windows 10 build 10586 is the first Windows
+		// release that supports 256 colors. Windows 10 build 14931 is the first release
+		// that supports 16m/TrueColor.
 		const osRelease = os.release().split('.');
 		if (
+			Number(process.versions.node.split('.')[0]) >= 8 &&
 			Number(osRelease[0]) >= 10 &&
 			Number(osRelease[2]) >= 10586
 		) {
@@ -1466,10 +1515,6 @@ function supportsColor(haveStream, streamIsTTY) {
 
 	if ('TEAMCITY_VERSION' in env) {
 		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if ('GITHUB_ACTIONS' in env) {
-		return 1;
 	}
 
 	if (env.COLORTERM === 'truecolor') {
@@ -1500,62 +1545,28 @@ function supportsColor(haveStream, streamIsTTY) {
 		return 1;
 	}
 
+	if (env.TERM === 'dumb') {
+		return min;
+	}
+
 	return min;
 }
 
 function getSupportLevel(stream) {
-	const level = supportsColor(stream, stream && stream.isTTY);
+	const level = supportsColor(stream);
 	return translateLevel(level);
 }
 
 var supportsColor_1 = {
 	supportsColor: getSupportLevel,
-	stdout: translateLevel(supportsColor(true, tty.isatty(1))),
-	stderr: translateLevel(supportsColor(true, tty.isatty(2)))
+	stdout: getSupportLevel(process.stdout),
+	stderr: getSupportLevel(process.stderr)
 };
 
-const stringReplaceAll = (string, substring, replacer) => {
-	let index = string.indexOf(substring);
-	if (index === -1) {
-		return string;
-	}
-
-	const substringLength = substring.length;
-	let endIndex = 0;
-	let returnValue = '';
-	do {
-		returnValue += string.substr(endIndex, index - endIndex) + substring + replacer;
-		endIndex = index + substringLength;
-		index = string.indexOf(substring, endIndex);
-	} while (index !== -1);
-
-	returnValue += string.substr(endIndex);
-	return returnValue;
-};
-
-const stringEncaseCRLFWithFirstIndex = (string, prefix, postfix, index) => {
-	let endIndex = 0;
-	let returnValue = '';
-	do {
-		const gotCR = string[index - 1] === '\r';
-		returnValue += string.substr(endIndex, (gotCR ? index - 1 : index) - endIndex) + prefix + (gotCR ? '\r\n' : '\n') + postfix;
-		endIndex = index + 1;
-		index = string.indexOf('\n', endIndex);
-	} while (index !== -1);
-
-	returnValue += string.substr(endIndex);
-	return returnValue;
-};
-
-var util = {
-	stringReplaceAll,
-	stringEncaseCRLFWithFirstIndex
-};
-
-const TEMPLATE_REGEX = /(?:\\(u(?:[a-f\d]{4}|\{[a-f\d]{1,6}\})|x[a-f\d]{2}|.))|(?:\{(~)?(\w+(?:\([^)]*\))?(?:\.\w+(?:\([^)]*\))?)*)(?:[ \t]|(?=\r?\n)))|(\})|((?:.|[\r\n\f])+?)/gi;
+const TEMPLATE_REGEX = /(?:\\(u[a-f\d]{4}|x[a-f\d]{2}|.))|(?:\{(~)?(\w+(?:\([^)]*\))?(?:\.\w+(?:\([^)]*\))?)*)(?:[ \t]|(?=\r?\n)))|(\})|((?:.|[\r\n\f])+?)/gi;
 const STYLE_REGEX = /(?:^|\.)(\w+)(?:\(([^)]*)\))?/g;
 const STRING_REGEX = /^(['"])((?:\\.|(?!\1)[^\\])*)\1$/;
-const ESCAPE_REGEX = /\\(u(?:[a-f\d]{4}|\{[a-f\d]{1,6}\})|x[a-f\d]{2}|.)|([^\\])/gi;
+const ESCAPE_REGEX = /\\(u[a-f\d]{4}|x[a-f\d]{2}|.)|([^\\])/gi;
 
 const ESCAPES = new Map([
 	['n', '\n'],
@@ -1571,31 +1582,23 @@ const ESCAPES = new Map([
 ]);
 
 function unescape(c) {
-	const u = c[0] === 'u';
-	const bracket = c[1] === '{';
-
-	if ((u && !bracket && c.length === 5) || (c[0] === 'x' && c.length === 3)) {
+	if ((c[0] === 'u' && c.length === 5) || (c[0] === 'x' && c.length === 3)) {
 		return String.fromCharCode(parseInt(c.slice(1), 16));
-	}
-
-	if (u && bracket) {
-		return String.fromCodePoint(parseInt(c.slice(2, -1), 16));
 	}
 
 	return ESCAPES.get(c) || c;
 }
 
-function parseArguments(name, arguments_) {
+function parseArguments(name, args) {
 	const results = [];
-	const chunks = arguments_.trim().split(/\s*,\s*/g);
+	const chunks = args.trim().split(/\s*,\s*/g);
 	let matches;
 
 	for (const chunk of chunks) {
-		const number = Number(chunk);
-		if (!Number.isNaN(number)) {
-			results.push(number);
+		if (!isNaN(chunk)) {
+			results.push(Number(chunk));
 		} else if ((matches = chunk.match(STRING_REGEX))) {
-			results.push(matches[2].replace(ESCAPE_REGEX, (m, escape, character) => escape ? unescape(escape) : character));
+			results.push(matches[2].replace(ESCAPE_REGEX, (m, escape, chr) => escape ? unescape(escape) : chr));
 		} else {
 			throw new Error(`Invalid Chalk template style argument: ${chunk} (in style '${name}')`);
 		}
@@ -1634,34 +1637,36 @@ function buildStyle(chalk, styles) {
 	}
 
 	let current = chalk;
-	for (const [styleName, styles] of Object.entries(enabled)) {
-		if (!Array.isArray(styles)) {
-			continue;
-		}
+	for (const styleName of Object.keys(enabled)) {
+		if (Array.isArray(enabled[styleName])) {
+			if (!(styleName in current)) {
+				throw new Error(`Unknown Chalk style: ${styleName}`);
+			}
 
-		if (!(styleName in current)) {
-			throw new Error(`Unknown Chalk style: ${styleName}`);
+			if (enabled[styleName].length > 0) {
+				current = current[styleName].apply(current, enabled[styleName]);
+			} else {
+				current = current[styleName];
+			}
 		}
-
-		current = styles.length > 0 ? current[styleName](...styles) : current[styleName];
 	}
 
 	return current;
 }
 
-var templates = (chalk, temporary) => {
+var templates = (chalk, tmp) => {
 	const styles = [];
 	const chunks = [];
 	let chunk = [];
 
 	// eslint-disable-next-line max-params
-	temporary.replace(TEMPLATE_REGEX, (m, escapeCharacter, inverse, style, close, character) => {
-		if (escapeCharacter) {
-			chunk.push(unescape(escapeCharacter));
+	tmp.replace(TEMPLATE_REGEX, (m, escapeChar, inverse, style, close, chr) => {
+		if (escapeChar) {
+			chunk.push(unescape(escapeChar));
 		} else if (style) {
-			const string = chunk.join('');
+			const str = chunk.join('');
 			chunk = [];
-			chunks.push(styles.length === 0 ? string : buildStyle(chalk, styles)(string));
+			chunks.push(styles.length === 0 ? str : buildStyle(chalk, styles)(str));
 			styles.push({inverse, styles: parseStyle(style)});
 		} else if (close) {
 			if (styles.length === 0) {
@@ -1672,7 +1677,7 @@ var templates = (chalk, temporary) => {
 			chunk = [];
 			styles.pop();
 		} else {
-			chunk.push(character);
+			chunk.push(chr);
 		}
 	});
 
@@ -1686,237 +1691,236 @@ var templates = (chalk, temporary) => {
 	return chunks.join('');
 };
 
-const {stdout: stdoutColor, stderr: stderrColor} = supportsColor_1;
-const {
-	stringReplaceAll: stringReplaceAll$1,
-	stringEncaseCRLFWithFirstIndex: stringEncaseCRLFWithFirstIndex$1
-} = util;
+var chalk = createCommonjsModule(function (module) {
+
+
+const stdoutColor = supportsColor_1.stdout;
+
+
+
+const isSimpleWindowsTerm = process.platform === 'win32' && !(process.env.TERM || '').toLowerCase().startsWith('xterm');
 
 // `supportsColor.level` → `ansiStyles.color[name]` mapping
-const levelMapping = [
-	'ansi',
-	'ansi',
-	'ansi256',
-	'ansi16m'
-];
+const levelMapping = ['ansi', 'ansi', 'ansi256', 'ansi16m'];
+
+// `color-convert` models to exclude from the Chalk API due to conflicts and such
+const skipModels = new Set(['gray']);
 
 const styles = Object.create(null);
 
-const applyOptions = (object, options = {}) => {
-	if (options.level > 3 || options.level < 0) {
-		throw new Error('The `level` option should be an integer from 0 to 3');
-	}
+function applyOptions(obj, options) {
+	options = options || {};
 
 	// Detect level if not set manually
-	const colorLevel = stdoutColor ? stdoutColor.level : 0;
-	object.level = options.level === undefined ? colorLevel : options.level;
-};
-
-class ChalkClass {
-	constructor(options) {
-		return chalkFactory(options);
-	}
+	const scLevel = stdoutColor ? stdoutColor.level : 0;
+	obj.level = options.level === undefined ? scLevel : options.level;
+	obj.enabled = 'enabled' in options ? options.enabled : obj.level > 0;
 }
-
-const chalkFactory = options => {
-	const chalk = {};
-	applyOptions(chalk, options);
-
-	chalk.template = (...arguments_) => chalkTag(chalk.template, ...arguments_);
-
-	Object.setPrototypeOf(chalk, Chalk.prototype);
-	Object.setPrototypeOf(chalk.template, chalk);
-
-	chalk.template.constructor = () => {
-		throw new Error('`chalk.constructor()` is deprecated. Use `new chalk.Instance()` instead.');
-	};
-
-	chalk.template.Instance = ChalkClass;
-
-	return chalk.template;
-};
 
 function Chalk(options) {
-	return chalkFactory(options);
+	// We check for this.template here since calling `chalk.constructor()`
+	// by itself will have a `this` of a previously constructed chalk object
+	if (!this || !(this instanceof Chalk) || this.template) {
+		const chalk = {};
+		applyOptions(chalk, options);
+
+		chalk.template = function () {
+			const args = [].slice.call(arguments);
+			return chalkTag.apply(null, [chalk.template].concat(args));
+		};
+
+		Object.setPrototypeOf(chalk, Chalk.prototype);
+		Object.setPrototypeOf(chalk.template, chalk);
+
+		chalk.template.constructor = Chalk;
+
+		return chalk.template;
+	}
+
+	applyOptions(this, options);
 }
 
-for (const [styleName, style] of Object.entries(ansiStyles)) {
-	styles[styleName] = {
+// Use bright blue on Windows as the normal blue color is illegible
+if (isSimpleWindowsTerm) {
+	ansiStyles.blue.open = '\u001B[94m';
+}
+
+for (const key of Object.keys(ansiStyles)) {
+	ansiStyles[key].closeRe = new RegExp(escapeStringRegexp(ansiStyles[key].close), 'g');
+
+	styles[key] = {
 		get() {
-			const builder = createBuilder(this, createStyler(style.open, style.close, this._styler), this._isEmpty);
-			Object.defineProperty(this, styleName, {value: builder});
-			return builder;
+			const codes = ansiStyles[key];
+			return build.call(this, this._styles ? this._styles.concat(codes) : [codes], this._empty, key);
 		}
 	};
 }
 
 styles.visible = {
 	get() {
-		const builder = createBuilder(this, this._styler, true);
-		Object.defineProperty(this, 'visible', {value: builder});
-		return builder;
+		return build.call(this, this._styles || [], true, 'visible');
 	}
 };
 
-const usedModels = ['rgb', 'hex', 'keyword', 'hsl', 'hsv', 'hwb', 'ansi', 'ansi256'];
+ansiStyles.color.closeRe = new RegExp(escapeStringRegexp(ansiStyles.color.close), 'g');
+for (const model of Object.keys(ansiStyles.color.ansi)) {
+	if (skipModels.has(model)) {
+		continue;
+	}
 
-for (const model of usedModels) {
 	styles[model] = {
 		get() {
-			const {level} = this;
-			return function (...arguments_) {
-				const styler = createStyler(ansiStyles.color[levelMapping[level]][model](...arguments_), ansiStyles.color.close, this._styler);
-				return createBuilder(this, styler, this._isEmpty);
+			const level = this.level;
+			return function () {
+				const open = ansiStyles.color[levelMapping[level]][model].apply(null, arguments);
+				const codes = {
+					open,
+					close: ansiStyles.color.close,
+					closeRe: ansiStyles.color.closeRe
+				};
+				return build.call(this, this._styles ? this._styles.concat(codes) : [codes], this._empty, model);
 			};
 		}
 	};
 }
 
-for (const model of usedModels) {
+ansiStyles.bgColor.closeRe = new RegExp(escapeStringRegexp(ansiStyles.bgColor.close), 'g');
+for (const model of Object.keys(ansiStyles.bgColor.ansi)) {
+	if (skipModels.has(model)) {
+		continue;
+	}
+
 	const bgModel = 'bg' + model[0].toUpperCase() + model.slice(1);
 	styles[bgModel] = {
 		get() {
-			const {level} = this;
-			return function (...arguments_) {
-				const styler = createStyler(ansiStyles.bgColor[levelMapping[level]][model](...arguments_), ansiStyles.bgColor.close, this._styler);
-				return createBuilder(this, styler, this._isEmpty);
+			const level = this.level;
+			return function () {
+				const open = ansiStyles.bgColor[levelMapping[level]][model].apply(null, arguments);
+				const codes = {
+					open,
+					close: ansiStyles.bgColor.close,
+					closeRe: ansiStyles.bgColor.closeRe
+				};
+				return build.call(this, this._styles ? this._styles.concat(codes) : [codes], this._empty, model);
 			};
 		}
 	};
 }
 
-const proto = Object.defineProperties(() => {}, {
-	...styles,
-	level: {
+const proto = Object.defineProperties(() => {}, styles);
+
+function build(_styles, _empty, key) {
+	const builder = function () {
+		return applyStyle.apply(builder, arguments);
+	};
+
+	builder._styles = _styles;
+	builder._empty = _empty;
+
+	const self = this;
+
+	Object.defineProperty(builder, 'level', {
 		enumerable: true,
 		get() {
-			return this._generator.level;
+			return self.level;
 		},
 		set(level) {
-			this._generator.level = level;
+			self.level = level;
 		}
-	}
-});
+	});
 
-const createStyler = (open, close, parent) => {
-	let openAll;
-	let closeAll;
-	if (parent === undefined) {
-		openAll = open;
-		closeAll = close;
-	} else {
-		openAll = parent.openAll + open;
-		closeAll = close + parent.closeAll;
-	}
+	Object.defineProperty(builder, 'enabled', {
+		enumerable: true,
+		get() {
+			return self.enabled;
+		},
+		set(enabled) {
+			self.enabled = enabled;
+		}
+	});
 
-	return {
-		open,
-		close,
-		openAll,
-		closeAll,
-		parent
-	};
-};
-
-const createBuilder = (self, _styler, _isEmpty) => {
-	const builder = (...arguments_) => {
-		// Single argument is hot path, implicit coercion is faster than anything
-		// eslint-disable-next-line no-implicit-coercion
-		return applyStyle(builder, (arguments_.length === 1) ? ('' + arguments_[0]) : arguments_.join(' '));
-	};
+	// See below for fix regarding invisible grey/dim combination on Windows
+	builder.hasGrey = this.hasGrey || key === 'gray' || key === 'grey';
 
 	// `__proto__` is used because we must return a function, but there is
 	// no way to create a function with a different prototype
 	builder.__proto__ = proto; // eslint-disable-line no-proto
 
-	builder._generator = self;
-	builder._styler = _styler;
-	builder._isEmpty = _isEmpty;
-
 	return builder;
-};
+}
 
-const applyStyle = (self, string) => {
-	if (self.level <= 0 || !string) {
-		return self._isEmpty ? '' : string;
+function applyStyle() {
+	// Support varags, but simply cast to string in case there's only one arg
+	const args = arguments;
+	const argsLen = args.length;
+	let str = String(arguments[0]);
+
+	if (argsLen === 0) {
+		return '';
 	}
 
-	let styler = self._styler;
-
-	if (styler === undefined) {
-		return string;
-	}
-
-	const {openAll, closeAll} = styler;
-	if (string.indexOf('\u001B') !== -1) {
-		while (styler !== undefined) {
-			// Replace any instances already present with a re-opening code
-			// otherwise only the part of the string until said closing code
-			// will be colored, and the rest will simply be 'plain'.
-			string = stringReplaceAll$1(string, styler.close, styler.open);
-
-			styler = styler.parent;
+	if (argsLen > 1) {
+		// Don't slice `arguments`, it prevents V8 optimizations
+		for (let a = 1; a < argsLen; a++) {
+			str += ' ' + args[a];
 		}
 	}
 
-	// We can move both next actions out of loop, because remaining actions in loop won't have
-	// any/visible effect on parts we add here. Close the styling before a linebreak and reopen
-	// after next line to fix a bleed issue on macOS: https://github.com/chalk/chalk/pull/92
-	const lfIndex = string.indexOf('\n');
-	if (lfIndex !== -1) {
-		string = stringEncaseCRLFWithFirstIndex$1(string, closeAll, openAll, lfIndex);
+	if (!this.enabled || this.level <= 0 || !str) {
+		return this._empty ? '' : str;
 	}
 
-	return openAll + string + closeAll;
-};
+	// Turns out that on Windows dimmed gray text becomes invisible in cmd.exe,
+	// see https://github.com/chalk/chalk/issues/58
+	// If we're on Windows and we're dealing with a gray color, temporarily make 'dim' a noop.
+	const originalDim = ansiStyles.dim.open;
+	if (isSimpleWindowsTerm && this.hasGrey) {
+		ansiStyles.dim.open = '';
+	}
 
-let template;
-const chalkTag = (chalk, ...strings) => {
-	const [firstString] = strings;
+	for (const code of this._styles.slice().reverse()) {
+		// Replace any instances already present with a re-opening code
+		// otherwise only the part of the string until said closing code
+		// will be colored, and the rest will simply be 'plain'.
+		str = code.open + str.replace(code.closeRe, code.open) + code.close;
 
-	if (!Array.isArray(firstString)) {
+		// Close the styling before a linebreak and reopen
+		// after next line to fix a bleed issue on macOS
+		// https://github.com/chalk/chalk/pull/92
+		str = str.replace(/\r?\n/g, `${code.close}$&${code.open}`);
+	}
+
+	// Reset the original `dim` if we changed it to work around the Windows dimmed gray issue
+	ansiStyles.dim.open = originalDim;
+
+	return str;
+}
+
+function chalkTag(chalk, strings) {
+	if (!Array.isArray(strings)) {
 		// If chalk() was called by itself or with a string,
 		// return the string itself as a string.
-		return strings.join(' ');
+		return [].slice.call(arguments, 1).join(' ');
 	}
 
-	const arguments_ = strings.slice(1);
-	const parts = [firstString.raw[0]];
+	const args = [].slice.call(arguments, 2);
+	const parts = [strings.raw[0]];
 
-	for (let i = 1; i < firstString.length; i++) {
-		parts.push(
-			String(arguments_[i - 1]).replace(/[{}\\]/g, '\\$&'),
-			String(firstString.raw[i])
-		);
+	for (let i = 1; i < strings.length; i++) {
+		parts.push(String(args[i - 1]).replace(/[{}\\]/g, '\\$&'));
+		parts.push(String(strings.raw[i]));
 	}
 
-	if (template === undefined) {
-		template = templates;
-	}
-
-	return template(chalk, parts.join(''));
-};
+	return templates(chalk, parts.join(''));
+}
 
 Object.defineProperties(Chalk.prototype, styles);
 
-const chalk = Chalk(); // eslint-disable-line new-cap
-chalk.supportsColor = stdoutColor;
-chalk.stderr = Chalk({level: stderrColor ? stderrColor.level : 0}); // eslint-disable-line new-cap
-chalk.stderr.supportsColor = stderrColor;
-
-// For TypeScript
-chalk.Level = {
-	None: 0,
-	Basic: 1,
-	Ansi256: 2,
-	TrueColor: 3,
-	0: 'None',
-	1: 'Basic',
-	2: 'Ansi256',
-	3: 'TrueColor'
-};
-
-var source = chalk;
+module.exports = Chalk(); // eslint-disable-line new-cap
+module.exports.supportsColor = stdoutColor;
+module.exports.default = module.exports; // For TypeScript
+});
+var chalk_1 = chalk.supportsColor;
 
 var commander = createCommonjsModule(function (module, exports) {
 /**
@@ -3675,15 +3679,1881 @@ var commander_2 = commander.Command;
 var commander_3 = commander.Option;
 var commander_4 = commander.CommanderError;
 
-var matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
+var colorName$1 = {
+	"aliceblue": [240, 248, 255],
+	"antiquewhite": [250, 235, 215],
+	"aqua": [0, 255, 255],
+	"aquamarine": [127, 255, 212],
+	"azure": [240, 255, 255],
+	"beige": [245, 245, 220],
+	"bisque": [255, 228, 196],
+	"black": [0, 0, 0],
+	"blanchedalmond": [255, 235, 205],
+	"blue": [0, 0, 255],
+	"blueviolet": [138, 43, 226],
+	"brown": [165, 42, 42],
+	"burlywood": [222, 184, 135],
+	"cadetblue": [95, 158, 160],
+	"chartreuse": [127, 255, 0],
+	"chocolate": [210, 105, 30],
+	"coral": [255, 127, 80],
+	"cornflowerblue": [100, 149, 237],
+	"cornsilk": [255, 248, 220],
+	"crimson": [220, 20, 60],
+	"cyan": [0, 255, 255],
+	"darkblue": [0, 0, 139],
+	"darkcyan": [0, 139, 139],
+	"darkgoldenrod": [184, 134, 11],
+	"darkgray": [169, 169, 169],
+	"darkgreen": [0, 100, 0],
+	"darkgrey": [169, 169, 169],
+	"darkkhaki": [189, 183, 107],
+	"darkmagenta": [139, 0, 139],
+	"darkolivegreen": [85, 107, 47],
+	"darkorange": [255, 140, 0],
+	"darkorchid": [153, 50, 204],
+	"darkred": [139, 0, 0],
+	"darksalmon": [233, 150, 122],
+	"darkseagreen": [143, 188, 143],
+	"darkslateblue": [72, 61, 139],
+	"darkslategray": [47, 79, 79],
+	"darkslategrey": [47, 79, 79],
+	"darkturquoise": [0, 206, 209],
+	"darkviolet": [148, 0, 211],
+	"deeppink": [255, 20, 147],
+	"deepskyblue": [0, 191, 255],
+	"dimgray": [105, 105, 105],
+	"dimgrey": [105, 105, 105],
+	"dodgerblue": [30, 144, 255],
+	"firebrick": [178, 34, 34],
+	"floralwhite": [255, 250, 240],
+	"forestgreen": [34, 139, 34],
+	"fuchsia": [255, 0, 255],
+	"gainsboro": [220, 220, 220],
+	"ghostwhite": [248, 248, 255],
+	"gold": [255, 215, 0],
+	"goldenrod": [218, 165, 32],
+	"gray": [128, 128, 128],
+	"green": [0, 128, 0],
+	"greenyellow": [173, 255, 47],
+	"grey": [128, 128, 128],
+	"honeydew": [240, 255, 240],
+	"hotpink": [255, 105, 180],
+	"indianred": [205, 92, 92],
+	"indigo": [75, 0, 130],
+	"ivory": [255, 255, 240],
+	"khaki": [240, 230, 140],
+	"lavender": [230, 230, 250],
+	"lavenderblush": [255, 240, 245],
+	"lawngreen": [124, 252, 0],
+	"lemonchiffon": [255, 250, 205],
+	"lightblue": [173, 216, 230],
+	"lightcoral": [240, 128, 128],
+	"lightcyan": [224, 255, 255],
+	"lightgoldenrodyellow": [250, 250, 210],
+	"lightgray": [211, 211, 211],
+	"lightgreen": [144, 238, 144],
+	"lightgrey": [211, 211, 211],
+	"lightpink": [255, 182, 193],
+	"lightsalmon": [255, 160, 122],
+	"lightseagreen": [32, 178, 170],
+	"lightskyblue": [135, 206, 250],
+	"lightslategray": [119, 136, 153],
+	"lightslategrey": [119, 136, 153],
+	"lightsteelblue": [176, 196, 222],
+	"lightyellow": [255, 255, 224],
+	"lime": [0, 255, 0],
+	"limegreen": [50, 205, 50],
+	"linen": [250, 240, 230],
+	"magenta": [255, 0, 255],
+	"maroon": [128, 0, 0],
+	"mediumaquamarine": [102, 205, 170],
+	"mediumblue": [0, 0, 205],
+	"mediumorchid": [186, 85, 211],
+	"mediumpurple": [147, 112, 219],
+	"mediumseagreen": [60, 179, 113],
+	"mediumslateblue": [123, 104, 238],
+	"mediumspringgreen": [0, 250, 154],
+	"mediumturquoise": [72, 209, 204],
+	"mediumvioletred": [199, 21, 133],
+	"midnightblue": [25, 25, 112],
+	"mintcream": [245, 255, 250],
+	"mistyrose": [255, 228, 225],
+	"moccasin": [255, 228, 181],
+	"navajowhite": [255, 222, 173],
+	"navy": [0, 0, 128],
+	"oldlace": [253, 245, 230],
+	"olive": [128, 128, 0],
+	"olivedrab": [107, 142, 35],
+	"orange": [255, 165, 0],
+	"orangered": [255, 69, 0],
+	"orchid": [218, 112, 214],
+	"palegoldenrod": [238, 232, 170],
+	"palegreen": [152, 251, 152],
+	"paleturquoise": [175, 238, 238],
+	"palevioletred": [219, 112, 147],
+	"papayawhip": [255, 239, 213],
+	"peachpuff": [255, 218, 185],
+	"peru": [205, 133, 63],
+	"pink": [255, 192, 203],
+	"plum": [221, 160, 221],
+	"powderblue": [176, 224, 230],
+	"purple": [128, 0, 128],
+	"rebeccapurple": [102, 51, 153],
+	"red": [255, 0, 0],
+	"rosybrown": [188, 143, 143],
+	"royalblue": [65, 105, 225],
+	"saddlebrown": [139, 69, 19],
+	"salmon": [250, 128, 114],
+	"sandybrown": [244, 164, 96],
+	"seagreen": [46, 139, 87],
+	"seashell": [255, 245, 238],
+	"sienna": [160, 82, 45],
+	"silver": [192, 192, 192],
+	"skyblue": [135, 206, 235],
+	"slateblue": [106, 90, 205],
+	"slategray": [112, 128, 144],
+	"slategrey": [112, 128, 144],
+	"snow": [255, 250, 250],
+	"springgreen": [0, 255, 127],
+	"steelblue": [70, 130, 180],
+	"tan": [210, 180, 140],
+	"teal": [0, 128, 128],
+	"thistle": [216, 191, 216],
+	"tomato": [255, 99, 71],
+	"turquoise": [64, 224, 208],
+	"violet": [238, 130, 238],
+	"wheat": [245, 222, 179],
+	"white": [255, 255, 255],
+	"whitesmoke": [245, 245, 245],
+	"yellow": [255, 255, 0],
+	"yellowgreen": [154, 205, 50]
+};
 
-var escapeStringRegexp = function (str) {
-	if (typeof str !== 'string') {
-		throw new TypeError('Expected a string');
+/* MIT license */
+/* eslint-disable no-mixed-operators */
+
+
+// NOTE: conversions should only return primitive values (i.e. arrays, or
+//       values that give correct `typeof` results).
+//       do not use box values types (i.e. Number(), String(), etc.)
+
+const reverseKeywords = {};
+for (const key of Object.keys(colorName$1)) {
+	reverseKeywords[colorName$1[key]] = key;
+}
+
+const convert$1 = {
+	rgb: {channels: 3, labels: 'rgb'},
+	hsl: {channels: 3, labels: 'hsl'},
+	hsv: {channels: 3, labels: 'hsv'},
+	hwb: {channels: 3, labels: 'hwb'},
+	cmyk: {channels: 4, labels: 'cmyk'},
+	xyz: {channels: 3, labels: 'xyz'},
+	lab: {channels: 3, labels: 'lab'},
+	lch: {channels: 3, labels: 'lch'},
+	hex: {channels: 1, labels: ['hex']},
+	keyword: {channels: 1, labels: ['keyword']},
+	ansi16: {channels: 1, labels: ['ansi16']},
+	ansi256: {channels: 1, labels: ['ansi256']},
+	hcg: {channels: 3, labels: ['h', 'c', 'g']},
+	apple: {channels: 3, labels: ['r16', 'g16', 'b16']},
+	gray: {channels: 1, labels: ['gray']}
+};
+
+var conversions$1 = convert$1;
+
+// Hide .channels and .labels properties
+for (const model of Object.keys(convert$1)) {
+	if (!('channels' in convert$1[model])) {
+		throw new Error('missing channels property: ' + model);
 	}
 
-	return str.replace(matchOperatorsRe, '\\$&');
+	if (!('labels' in convert$1[model])) {
+		throw new Error('missing channel labels property: ' + model);
+	}
+
+	if (convert$1[model].labels.length !== convert$1[model].channels) {
+		throw new Error('channel and label counts mismatch: ' + model);
+	}
+
+	const {channels, labels} = convert$1[model];
+	delete convert$1[model].channels;
+	delete convert$1[model].labels;
+	Object.defineProperty(convert$1[model], 'channels', {value: channels});
+	Object.defineProperty(convert$1[model], 'labels', {value: labels});
+}
+
+convert$1.rgb.hsl = function (rgb) {
+	const r = rgb[0] / 255;
+	const g = rgb[1] / 255;
+	const b = rgb[2] / 255;
+	const min = Math.min(r, g, b);
+	const max = Math.max(r, g, b);
+	const delta = max - min;
+	let h;
+	let s;
+
+	if (max === min) {
+		h = 0;
+	} else if (r === max) {
+		h = (g - b) / delta;
+	} else if (g === max) {
+		h = 2 + (b - r) / delta;
+	} else if (b === max) {
+		h = 4 + (r - g) / delta;
+	}
+
+	h = Math.min(h * 60, 360);
+
+	if (h < 0) {
+		h += 360;
+	}
+
+	const l = (min + max) / 2;
+
+	if (max === min) {
+		s = 0;
+	} else if (l <= 0.5) {
+		s = delta / (max + min);
+	} else {
+		s = delta / (2 - max - min);
+	}
+
+	return [h, s * 100, l * 100];
 };
+
+convert$1.rgb.hsv = function (rgb) {
+	let rdif;
+	let gdif;
+	let bdif;
+	let h;
+	let s;
+
+	const r = rgb[0] / 255;
+	const g = rgb[1] / 255;
+	const b = rgb[2] / 255;
+	const v = Math.max(r, g, b);
+	const diff = v - Math.min(r, g, b);
+	const diffc = function (c) {
+		return (v - c) / 6 / diff + 1 / 2;
+	};
+
+	if (diff === 0) {
+		h = 0;
+		s = 0;
+	} else {
+		s = diff / v;
+		rdif = diffc(r);
+		gdif = diffc(g);
+		bdif = diffc(b);
+
+		if (r === v) {
+			h = bdif - gdif;
+		} else if (g === v) {
+			h = (1 / 3) + rdif - bdif;
+		} else if (b === v) {
+			h = (2 / 3) + gdif - rdif;
+		}
+
+		if (h < 0) {
+			h += 1;
+		} else if (h > 1) {
+			h -= 1;
+		}
+	}
+
+	return [
+		h * 360,
+		s * 100,
+		v * 100
+	];
+};
+
+convert$1.rgb.hwb = function (rgb) {
+	const r = rgb[0];
+	const g = rgb[1];
+	let b = rgb[2];
+	const h = convert$1.rgb.hsl(rgb)[0];
+	const w = 1 / 255 * Math.min(r, Math.min(g, b));
+
+	b = 1 - 1 / 255 * Math.max(r, Math.max(g, b));
+
+	return [h, w * 100, b * 100];
+};
+
+convert$1.rgb.cmyk = function (rgb) {
+	const r = rgb[0] / 255;
+	const g = rgb[1] / 255;
+	const b = rgb[2] / 255;
+
+	const k = Math.min(1 - r, 1 - g, 1 - b);
+	const c = (1 - r - k) / (1 - k) || 0;
+	const m = (1 - g - k) / (1 - k) || 0;
+	const y = (1 - b - k) / (1 - k) || 0;
+
+	return [c * 100, m * 100, y * 100, k * 100];
+};
+
+function comparativeDistance(x, y) {
+	/*
+		See https://en.m.wikipedia.org/wiki/Euclidean_distance#Squared_Euclidean_distance
+	*/
+	return (
+		((x[0] - y[0]) ** 2) +
+		((x[1] - y[1]) ** 2) +
+		((x[2] - y[2]) ** 2)
+	);
+}
+
+convert$1.rgb.keyword = function (rgb) {
+	const reversed = reverseKeywords[rgb];
+	if (reversed) {
+		return reversed;
+	}
+
+	let currentClosestDistance = Infinity;
+	let currentClosestKeyword;
+
+	for (const keyword of Object.keys(colorName$1)) {
+		const value = colorName$1[keyword];
+
+		// Compute comparative distance
+		const distance = comparativeDistance(rgb, value);
+
+		// Check if its less, if so set as closest
+		if (distance < currentClosestDistance) {
+			currentClosestDistance = distance;
+			currentClosestKeyword = keyword;
+		}
+	}
+
+	return currentClosestKeyword;
+};
+
+convert$1.keyword.rgb = function (keyword) {
+	return colorName$1[keyword];
+};
+
+convert$1.rgb.xyz = function (rgb) {
+	let r = rgb[0] / 255;
+	let g = rgb[1] / 255;
+	let b = rgb[2] / 255;
+
+	// Assume sRGB
+	r = r > 0.04045 ? (((r + 0.055) / 1.055) ** 2.4) : (r / 12.92);
+	g = g > 0.04045 ? (((g + 0.055) / 1.055) ** 2.4) : (g / 12.92);
+	b = b > 0.04045 ? (((b + 0.055) / 1.055) ** 2.4) : (b / 12.92);
+
+	const x = (r * 0.4124) + (g * 0.3576) + (b * 0.1805);
+	const y = (r * 0.2126) + (g * 0.7152) + (b * 0.0722);
+	const z = (r * 0.0193) + (g * 0.1192) + (b * 0.9505);
+
+	return [x * 100, y * 100, z * 100];
+};
+
+convert$1.rgb.lab = function (rgb) {
+	const xyz = convert$1.rgb.xyz(rgb);
+	let x = xyz[0];
+	let y = xyz[1];
+	let z = xyz[2];
+
+	x /= 95.047;
+	y /= 100;
+	z /= 108.883;
+
+	x = x > 0.008856 ? (x ** (1 / 3)) : (7.787 * x) + (16 / 116);
+	y = y > 0.008856 ? (y ** (1 / 3)) : (7.787 * y) + (16 / 116);
+	z = z > 0.008856 ? (z ** (1 / 3)) : (7.787 * z) + (16 / 116);
+
+	const l = (116 * y) - 16;
+	const a = 500 * (x - y);
+	const b = 200 * (y - z);
+
+	return [l, a, b];
+};
+
+convert$1.hsl.rgb = function (hsl) {
+	const h = hsl[0] / 360;
+	const s = hsl[1] / 100;
+	const l = hsl[2] / 100;
+	let t2;
+	let t3;
+	let val;
+
+	if (s === 0) {
+		val = l * 255;
+		return [val, val, val];
+	}
+
+	if (l < 0.5) {
+		t2 = l * (1 + s);
+	} else {
+		t2 = l + s - l * s;
+	}
+
+	const t1 = 2 * l - t2;
+
+	const rgb = [0, 0, 0];
+	for (let i = 0; i < 3; i++) {
+		t3 = h + 1 / 3 * -(i - 1);
+		if (t3 < 0) {
+			t3++;
+		}
+
+		if (t3 > 1) {
+			t3--;
+		}
+
+		if (6 * t3 < 1) {
+			val = t1 + (t2 - t1) * 6 * t3;
+		} else if (2 * t3 < 1) {
+			val = t2;
+		} else if (3 * t3 < 2) {
+			val = t1 + (t2 - t1) * (2 / 3 - t3) * 6;
+		} else {
+			val = t1;
+		}
+
+		rgb[i] = val * 255;
+	}
+
+	return rgb;
+};
+
+convert$1.hsl.hsv = function (hsl) {
+	const h = hsl[0];
+	let s = hsl[1] / 100;
+	let l = hsl[2] / 100;
+	let smin = s;
+	const lmin = Math.max(l, 0.01);
+
+	l *= 2;
+	s *= (l <= 1) ? l : 2 - l;
+	smin *= lmin <= 1 ? lmin : 2 - lmin;
+	const v = (l + s) / 2;
+	const sv = l === 0 ? (2 * smin) / (lmin + smin) : (2 * s) / (l + s);
+
+	return [h, sv * 100, v * 100];
+};
+
+convert$1.hsv.rgb = function (hsv) {
+	const h = hsv[0] / 60;
+	const s = hsv[1] / 100;
+	let v = hsv[2] / 100;
+	const hi = Math.floor(h) % 6;
+
+	const f = h - Math.floor(h);
+	const p = 255 * v * (1 - s);
+	const q = 255 * v * (1 - (s * f));
+	const t = 255 * v * (1 - (s * (1 - f)));
+	v *= 255;
+
+	switch (hi) {
+		case 0:
+			return [v, t, p];
+		case 1:
+			return [q, v, p];
+		case 2:
+			return [p, v, t];
+		case 3:
+			return [p, q, v];
+		case 4:
+			return [t, p, v];
+		case 5:
+			return [v, p, q];
+	}
+};
+
+convert$1.hsv.hsl = function (hsv) {
+	const h = hsv[0];
+	const s = hsv[1] / 100;
+	const v = hsv[2] / 100;
+	const vmin = Math.max(v, 0.01);
+	let sl;
+	let l;
+
+	l = (2 - s) * v;
+	const lmin = (2 - s) * vmin;
+	sl = s * vmin;
+	sl /= (lmin <= 1) ? lmin : 2 - lmin;
+	sl = sl || 0;
+	l /= 2;
+
+	return [h, sl * 100, l * 100];
+};
+
+// http://dev.w3.org/csswg/css-color/#hwb-to-rgb
+convert$1.hwb.rgb = function (hwb) {
+	const h = hwb[0] / 360;
+	let wh = hwb[1] / 100;
+	let bl = hwb[2] / 100;
+	const ratio = wh + bl;
+	let f;
+
+	// Wh + bl cant be > 1
+	if (ratio > 1) {
+		wh /= ratio;
+		bl /= ratio;
+	}
+
+	const i = Math.floor(6 * h);
+	const v = 1 - bl;
+	f = 6 * h - i;
+
+	if ((i & 0x01) !== 0) {
+		f = 1 - f;
+	}
+
+	const n = wh + f * (v - wh); // Linear interpolation
+
+	let r;
+	let g;
+	let b;
+	/* eslint-disable max-statements-per-line,no-multi-spaces */
+	switch (i) {
+		default:
+		case 6:
+		case 0: r = v;  g = n;  b = wh; break;
+		case 1: r = n;  g = v;  b = wh; break;
+		case 2: r = wh; g = v;  b = n; break;
+		case 3: r = wh; g = n;  b = v; break;
+		case 4: r = n;  g = wh; b = v; break;
+		case 5: r = v;  g = wh; b = n; break;
+	}
+	/* eslint-enable max-statements-per-line,no-multi-spaces */
+
+	return [r * 255, g * 255, b * 255];
+};
+
+convert$1.cmyk.rgb = function (cmyk) {
+	const c = cmyk[0] / 100;
+	const m = cmyk[1] / 100;
+	const y = cmyk[2] / 100;
+	const k = cmyk[3] / 100;
+
+	const r = 1 - Math.min(1, c * (1 - k) + k);
+	const g = 1 - Math.min(1, m * (1 - k) + k);
+	const b = 1 - Math.min(1, y * (1 - k) + k);
+
+	return [r * 255, g * 255, b * 255];
+};
+
+convert$1.xyz.rgb = function (xyz) {
+	const x = xyz[0] / 100;
+	const y = xyz[1] / 100;
+	const z = xyz[2] / 100;
+	let r;
+	let g;
+	let b;
+
+	r = (x * 3.2406) + (y * -1.5372) + (z * -0.4986);
+	g = (x * -0.9689) + (y * 1.8758) + (z * 0.0415);
+	b = (x * 0.0557) + (y * -0.2040) + (z * 1.0570);
+
+	// Assume sRGB
+	r = r > 0.0031308
+		? ((1.055 * (r ** (1.0 / 2.4))) - 0.055)
+		: r * 12.92;
+
+	g = g > 0.0031308
+		? ((1.055 * (g ** (1.0 / 2.4))) - 0.055)
+		: g * 12.92;
+
+	b = b > 0.0031308
+		? ((1.055 * (b ** (1.0 / 2.4))) - 0.055)
+		: b * 12.92;
+
+	r = Math.min(Math.max(0, r), 1);
+	g = Math.min(Math.max(0, g), 1);
+	b = Math.min(Math.max(0, b), 1);
+
+	return [r * 255, g * 255, b * 255];
+};
+
+convert$1.xyz.lab = function (xyz) {
+	let x = xyz[0];
+	let y = xyz[1];
+	let z = xyz[2];
+
+	x /= 95.047;
+	y /= 100;
+	z /= 108.883;
+
+	x = x > 0.008856 ? (x ** (1 / 3)) : (7.787 * x) + (16 / 116);
+	y = y > 0.008856 ? (y ** (1 / 3)) : (7.787 * y) + (16 / 116);
+	z = z > 0.008856 ? (z ** (1 / 3)) : (7.787 * z) + (16 / 116);
+
+	const l = (116 * y) - 16;
+	const a = 500 * (x - y);
+	const b = 200 * (y - z);
+
+	return [l, a, b];
+};
+
+convert$1.lab.xyz = function (lab) {
+	const l = lab[0];
+	const a = lab[1];
+	const b = lab[2];
+	let x;
+	let y;
+	let z;
+
+	y = (l + 16) / 116;
+	x = a / 500 + y;
+	z = y - b / 200;
+
+	const y2 = y ** 3;
+	const x2 = x ** 3;
+	const z2 = z ** 3;
+	y = y2 > 0.008856 ? y2 : (y - 16 / 116) / 7.787;
+	x = x2 > 0.008856 ? x2 : (x - 16 / 116) / 7.787;
+	z = z2 > 0.008856 ? z2 : (z - 16 / 116) / 7.787;
+
+	x *= 95.047;
+	y *= 100;
+	z *= 108.883;
+
+	return [x, y, z];
+};
+
+convert$1.lab.lch = function (lab) {
+	const l = lab[0];
+	const a = lab[1];
+	const b = lab[2];
+	let h;
+
+	const hr = Math.atan2(b, a);
+	h = hr * 360 / 2 / Math.PI;
+
+	if (h < 0) {
+		h += 360;
+	}
+
+	const c = Math.sqrt(a * a + b * b);
+
+	return [l, c, h];
+};
+
+convert$1.lch.lab = function (lch) {
+	const l = lch[0];
+	const c = lch[1];
+	const h = lch[2];
+
+	const hr = h / 360 * 2 * Math.PI;
+	const a = c * Math.cos(hr);
+	const b = c * Math.sin(hr);
+
+	return [l, a, b];
+};
+
+convert$1.rgb.ansi16 = function (args, saturation = null) {
+	const [r, g, b] = args;
+	let value = saturation === null ? convert$1.rgb.hsv(args)[2] : saturation; // Hsv -> ansi16 optimization
+
+	value = Math.round(value / 50);
+
+	if (value === 0) {
+		return 30;
+	}
+
+	let ansi = 30
+		+ ((Math.round(b / 255) << 2)
+		| (Math.round(g / 255) << 1)
+		| Math.round(r / 255));
+
+	if (value === 2) {
+		ansi += 60;
+	}
+
+	return ansi;
+};
+
+convert$1.hsv.ansi16 = function (args) {
+	// Optimization here; we already know the value and don't need to get
+	// it converted for us.
+	return convert$1.rgb.ansi16(convert$1.hsv.rgb(args), args[2]);
+};
+
+convert$1.rgb.ansi256 = function (args) {
+	const r = args[0];
+	const g = args[1];
+	const b = args[2];
+
+	// We use the extended greyscale palette here, with the exception of
+	// black and white. normal palette only has 4 greyscale shades.
+	if (r === g && g === b) {
+		if (r < 8) {
+			return 16;
+		}
+
+		if (r > 248) {
+			return 231;
+		}
+
+		return Math.round(((r - 8) / 247) * 24) + 232;
+	}
+
+	const ansi = 16
+		+ (36 * Math.round(r / 255 * 5))
+		+ (6 * Math.round(g / 255 * 5))
+		+ Math.round(b / 255 * 5);
+
+	return ansi;
+};
+
+convert$1.ansi16.rgb = function (args) {
+	let color = args % 10;
+
+	// Handle greyscale
+	if (color === 0 || color === 7) {
+		if (args > 50) {
+			color += 3.5;
+		}
+
+		color = color / 10.5 * 255;
+
+		return [color, color, color];
+	}
+
+	const mult = (~~(args > 50) + 1) * 0.5;
+	const r = ((color & 1) * mult) * 255;
+	const g = (((color >> 1) & 1) * mult) * 255;
+	const b = (((color >> 2) & 1) * mult) * 255;
+
+	return [r, g, b];
+};
+
+convert$1.ansi256.rgb = function (args) {
+	// Handle greyscale
+	if (args >= 232) {
+		const c = (args - 232) * 10 + 8;
+		return [c, c, c];
+	}
+
+	args -= 16;
+
+	let rem;
+	const r = Math.floor(args / 36) / 5 * 255;
+	const g = Math.floor((rem = args % 36) / 6) / 5 * 255;
+	const b = (rem % 6) / 5 * 255;
+
+	return [r, g, b];
+};
+
+convert$1.rgb.hex = function (args) {
+	const integer = ((Math.round(args[0]) & 0xFF) << 16)
+		+ ((Math.round(args[1]) & 0xFF) << 8)
+		+ (Math.round(args[2]) & 0xFF);
+
+	const string = integer.toString(16).toUpperCase();
+	return '000000'.substring(string.length) + string;
+};
+
+convert$1.hex.rgb = function (args) {
+	const match = args.toString(16).match(/[a-f0-9]{6}|[a-f0-9]{3}/i);
+	if (!match) {
+		return [0, 0, 0];
+	}
+
+	let colorString = match[0];
+
+	if (match[0].length === 3) {
+		colorString = colorString.split('').map(char => {
+			return char + char;
+		}).join('');
+	}
+
+	const integer = parseInt(colorString, 16);
+	const r = (integer >> 16) & 0xFF;
+	const g = (integer >> 8) & 0xFF;
+	const b = integer & 0xFF;
+
+	return [r, g, b];
+};
+
+convert$1.rgb.hcg = function (rgb) {
+	const r = rgb[0] / 255;
+	const g = rgb[1] / 255;
+	const b = rgb[2] / 255;
+	const max = Math.max(Math.max(r, g), b);
+	const min = Math.min(Math.min(r, g), b);
+	const chroma = (max - min);
+	let grayscale;
+	let hue;
+
+	if (chroma < 1) {
+		grayscale = min / (1 - chroma);
+	} else {
+		grayscale = 0;
+	}
+
+	if (chroma <= 0) {
+		hue = 0;
+	} else
+	if (max === r) {
+		hue = ((g - b) / chroma) % 6;
+	} else
+	if (max === g) {
+		hue = 2 + (b - r) / chroma;
+	} else {
+		hue = 4 + (r - g) / chroma;
+	}
+
+	hue /= 6;
+	hue %= 1;
+
+	return [hue * 360, chroma * 100, grayscale * 100];
+};
+
+convert$1.hsl.hcg = function (hsl) {
+	const s = hsl[1] / 100;
+	const l = hsl[2] / 100;
+
+	const c = l < 0.5 ? (2.0 * s * l) : (2.0 * s * (1.0 - l));
+
+	let f = 0;
+	if (c < 1.0) {
+		f = (l - 0.5 * c) / (1.0 - c);
+	}
+
+	return [hsl[0], c * 100, f * 100];
+};
+
+convert$1.hsv.hcg = function (hsv) {
+	const s = hsv[1] / 100;
+	const v = hsv[2] / 100;
+
+	const c = s * v;
+	let f = 0;
+
+	if (c < 1.0) {
+		f = (v - c) / (1 - c);
+	}
+
+	return [hsv[0], c * 100, f * 100];
+};
+
+convert$1.hcg.rgb = function (hcg) {
+	const h = hcg[0] / 360;
+	const c = hcg[1] / 100;
+	const g = hcg[2] / 100;
+
+	if (c === 0.0) {
+		return [g * 255, g * 255, g * 255];
+	}
+
+	const pure = [0, 0, 0];
+	const hi = (h % 1) * 6;
+	const v = hi % 1;
+	const w = 1 - v;
+	let mg = 0;
+
+	/* eslint-disable max-statements-per-line */
+	switch (Math.floor(hi)) {
+		case 0:
+			pure[0] = 1; pure[1] = v; pure[2] = 0; break;
+		case 1:
+			pure[0] = w; pure[1] = 1; pure[2] = 0; break;
+		case 2:
+			pure[0] = 0; pure[1] = 1; pure[2] = v; break;
+		case 3:
+			pure[0] = 0; pure[1] = w; pure[2] = 1; break;
+		case 4:
+			pure[0] = v; pure[1] = 0; pure[2] = 1; break;
+		default:
+			pure[0] = 1; pure[1] = 0; pure[2] = w;
+	}
+	/* eslint-enable max-statements-per-line */
+
+	mg = (1.0 - c) * g;
+
+	return [
+		(c * pure[0] + mg) * 255,
+		(c * pure[1] + mg) * 255,
+		(c * pure[2] + mg) * 255
+	];
+};
+
+convert$1.hcg.hsv = function (hcg) {
+	const c = hcg[1] / 100;
+	const g = hcg[2] / 100;
+
+	const v = c + g * (1.0 - c);
+	let f = 0;
+
+	if (v > 0.0) {
+		f = c / v;
+	}
+
+	return [hcg[0], f * 100, v * 100];
+};
+
+convert$1.hcg.hsl = function (hcg) {
+	const c = hcg[1] / 100;
+	const g = hcg[2] / 100;
+
+	const l = g * (1.0 - c) + 0.5 * c;
+	let s = 0;
+
+	if (l > 0.0 && l < 0.5) {
+		s = c / (2 * l);
+	} else
+	if (l >= 0.5 && l < 1.0) {
+		s = c / (2 * (1 - l));
+	}
+
+	return [hcg[0], s * 100, l * 100];
+};
+
+convert$1.hcg.hwb = function (hcg) {
+	const c = hcg[1] / 100;
+	const g = hcg[2] / 100;
+	const v = c + g * (1.0 - c);
+	return [hcg[0], (v - c) * 100, (1 - v) * 100];
+};
+
+convert$1.hwb.hcg = function (hwb) {
+	const w = hwb[1] / 100;
+	const b = hwb[2] / 100;
+	const v = 1 - b;
+	const c = v - w;
+	let g = 0;
+
+	if (c < 1) {
+		g = (v - c) / (1 - c);
+	}
+
+	return [hwb[0], c * 100, g * 100];
+};
+
+convert$1.apple.rgb = function (apple) {
+	return [(apple[0] / 65535) * 255, (apple[1] / 65535) * 255, (apple[2] / 65535) * 255];
+};
+
+convert$1.rgb.apple = function (rgb) {
+	return [(rgb[0] / 255) * 65535, (rgb[1] / 255) * 65535, (rgb[2] / 255) * 65535];
+};
+
+convert$1.gray.rgb = function (args) {
+	return [args[0] / 100 * 255, args[0] / 100 * 255, args[0] / 100 * 255];
+};
+
+convert$1.gray.hsl = function (args) {
+	return [0, 0, args[0]];
+};
+
+convert$1.gray.hsv = convert$1.gray.hsl;
+
+convert$1.gray.hwb = function (gray) {
+	return [0, 100, gray[0]];
+};
+
+convert$1.gray.cmyk = function (gray) {
+	return [0, 0, 0, gray[0]];
+};
+
+convert$1.gray.lab = function (gray) {
+	return [gray[0], 0, 0];
+};
+
+convert$1.gray.hex = function (gray) {
+	const val = Math.round(gray[0] / 100 * 255) & 0xFF;
+	const integer = (val << 16) + (val << 8) + val;
+
+	const string = integer.toString(16).toUpperCase();
+	return '000000'.substring(string.length) + string;
+};
+
+convert$1.rgb.gray = function (rgb) {
+	const val = (rgb[0] + rgb[1] + rgb[2]) / 3;
+	return [val / 255 * 100];
+};
+
+/*
+	This function routes a model to all other models.
+
+	all functions that are routed have a property `.conversion` attached
+	to the returned synthetic function. This property is an array
+	of strings, each with the steps in between the 'from' and 'to'
+	color models (inclusive).
+
+	conversions that are not possible simply are not included.
+*/
+
+function buildGraph$1() {
+	const graph = {};
+	// https://jsperf.com/object-keys-vs-for-in-with-closure/3
+	const models = Object.keys(conversions$1);
+
+	for (let len = models.length, i = 0; i < len; i++) {
+		graph[models[i]] = {
+			// http://jsperf.com/1-vs-infinity
+			// micro-opt, but this is simple.
+			distance: -1,
+			parent: null
+		};
+	}
+
+	return graph;
+}
+
+// https://en.wikipedia.org/wiki/Breadth-first_search
+function deriveBFS$1(fromModel) {
+	const graph = buildGraph$1();
+	const queue = [fromModel]; // Unshift -> queue -> pop
+
+	graph[fromModel].distance = 0;
+
+	while (queue.length) {
+		const current = queue.pop();
+		const adjacents = Object.keys(conversions$1[current]);
+
+		for (let len = adjacents.length, i = 0; i < len; i++) {
+			const adjacent = adjacents[i];
+			const node = graph[adjacent];
+
+			if (node.distance === -1) {
+				node.distance = graph[current].distance + 1;
+				node.parent = current;
+				queue.unshift(adjacent);
+			}
+		}
+	}
+
+	return graph;
+}
+
+function link$1(from, to) {
+	return function (args) {
+		return to(from(args));
+	};
+}
+
+function wrapConversion$1(toModel, graph) {
+	const path = [graph[toModel].parent, toModel];
+	let fn = conversions$1[graph[toModel].parent][toModel];
+
+	let cur = graph[toModel].parent;
+	while (graph[cur].parent) {
+		path.unshift(graph[cur].parent);
+		fn = link$1(conversions$1[graph[cur].parent][cur], fn);
+		cur = graph[cur].parent;
+	}
+
+	fn.conversion = path;
+	return fn;
+}
+
+var route$1 = function (fromModel) {
+	const graph = deriveBFS$1(fromModel);
+	const conversion = {};
+
+	const models = Object.keys(graph);
+	for (let len = models.length, i = 0; i < len; i++) {
+		const toModel = models[i];
+		const node = graph[toModel];
+
+		if (node.parent === null) {
+			// No possible conversion, or this node is the source model.
+			continue;
+		}
+
+		conversion[toModel] = wrapConversion$1(toModel, graph);
+	}
+
+	return conversion;
+};
+
+const convert$2 = {};
+
+const models$1 = Object.keys(conversions$1);
+
+function wrapRaw$1(fn) {
+	const wrappedFn = function (...args) {
+		const arg0 = args[0];
+		if (arg0 === undefined || arg0 === null) {
+			return arg0;
+		}
+
+		if (arg0.length > 1) {
+			args = arg0;
+		}
+
+		return fn(args);
+	};
+
+	// Preserve .conversion property if there is one
+	if ('conversion' in fn) {
+		wrappedFn.conversion = fn.conversion;
+	}
+
+	return wrappedFn;
+}
+
+function wrapRounded$1(fn) {
+	const wrappedFn = function (...args) {
+		const arg0 = args[0];
+
+		if (arg0 === undefined || arg0 === null) {
+			return arg0;
+		}
+
+		if (arg0.length > 1) {
+			args = arg0;
+		}
+
+		const result = fn(args);
+
+		// We're assuming the result is an array here.
+		// see notice in conversions.js; don't use box types
+		// in conversion functions.
+		if (typeof result === 'object') {
+			for (let len = result.length, i = 0; i < len; i++) {
+				result[i] = Math.round(result[i]);
+			}
+		}
+
+		return result;
+	};
+
+	// Preserve .conversion property if there is one
+	if ('conversion' in fn) {
+		wrappedFn.conversion = fn.conversion;
+	}
+
+	return wrappedFn;
+}
+
+models$1.forEach(fromModel => {
+	convert$2[fromModel] = {};
+
+	Object.defineProperty(convert$2[fromModel], 'channels', {value: conversions$1[fromModel].channels});
+	Object.defineProperty(convert$2[fromModel], 'labels', {value: conversions$1[fromModel].labels});
+
+	const routes = route$1(fromModel);
+	const routeModels = Object.keys(routes);
+
+	routeModels.forEach(toModel => {
+		const fn = routes[toModel];
+
+		convert$2[fromModel][toModel] = wrapRounded$1(fn);
+		convert$2[fromModel][toModel].raw = wrapRaw$1(fn);
+	});
+});
+
+var colorConvert$1 = convert$2;
+
+var ansiStyles$1 = createCommonjsModule(function (module) {
+
+const wrapAnsi16 = (fn, offset) => (...args) => {
+	const code = fn(...args);
+	return `\u001B[${code + offset}m`;
+};
+
+const wrapAnsi256 = (fn, offset) => (...args) => {
+	const code = fn(...args);
+	return `\u001B[${38 + offset};5;${code}m`;
+};
+
+const wrapAnsi16m = (fn, offset) => (...args) => {
+	const rgb = fn(...args);
+	return `\u001B[${38 + offset};2;${rgb[0]};${rgb[1]};${rgb[2]}m`;
+};
+
+const ansi2ansi = n => n;
+const rgb2rgb = (r, g, b) => [r, g, b];
+
+const setLazyProperty = (object, property, get) => {
+	Object.defineProperty(object, property, {
+		get: () => {
+			const value = get();
+
+			Object.defineProperty(object, property, {
+				value,
+				enumerable: true,
+				configurable: true
+			});
+
+			return value;
+		},
+		enumerable: true,
+		configurable: true
+	});
+};
+
+/** @type {typeof import('color-convert')} */
+let colorConvert;
+const makeDynamicStyles = (wrap, targetSpace, identity, isBackground) => {
+	if (colorConvert === undefined) {
+		colorConvert = colorConvert$1;
+	}
+
+	const offset = isBackground ? 10 : 0;
+	const styles = {};
+
+	for (const [sourceSpace, suite] of Object.entries(colorConvert)) {
+		const name = sourceSpace === 'ansi16' ? 'ansi' : sourceSpace;
+		if (sourceSpace === targetSpace) {
+			styles[name] = wrap(identity, offset);
+		} else if (typeof suite === 'object') {
+			styles[name] = wrap(suite[targetSpace], offset);
+		}
+	}
+
+	return styles;
+};
+
+function assembleStyles() {
+	const codes = new Map();
+	const styles = {
+		modifier: {
+			reset: [0, 0],
+			// 21 isn't widely supported and 22 does the same thing
+			bold: [1, 22],
+			dim: [2, 22],
+			italic: [3, 23],
+			underline: [4, 24],
+			inverse: [7, 27],
+			hidden: [8, 28],
+			strikethrough: [9, 29]
+		},
+		color: {
+			black: [30, 39],
+			red: [31, 39],
+			green: [32, 39],
+			yellow: [33, 39],
+			blue: [34, 39],
+			magenta: [35, 39],
+			cyan: [36, 39],
+			white: [37, 39],
+
+			// Bright color
+			blackBright: [90, 39],
+			redBright: [91, 39],
+			greenBright: [92, 39],
+			yellowBright: [93, 39],
+			blueBright: [94, 39],
+			magentaBright: [95, 39],
+			cyanBright: [96, 39],
+			whiteBright: [97, 39]
+		},
+		bgColor: {
+			bgBlack: [40, 49],
+			bgRed: [41, 49],
+			bgGreen: [42, 49],
+			bgYellow: [43, 49],
+			bgBlue: [44, 49],
+			bgMagenta: [45, 49],
+			bgCyan: [46, 49],
+			bgWhite: [47, 49],
+
+			// Bright color
+			bgBlackBright: [100, 49],
+			bgRedBright: [101, 49],
+			bgGreenBright: [102, 49],
+			bgYellowBright: [103, 49],
+			bgBlueBright: [104, 49],
+			bgMagentaBright: [105, 49],
+			bgCyanBright: [106, 49],
+			bgWhiteBright: [107, 49]
+		}
+	};
+
+	// Alias bright black as gray (and grey)
+	styles.color.gray = styles.color.blackBright;
+	styles.bgColor.bgGray = styles.bgColor.bgBlackBright;
+	styles.color.grey = styles.color.blackBright;
+	styles.bgColor.bgGrey = styles.bgColor.bgBlackBright;
+
+	for (const [groupName, group] of Object.entries(styles)) {
+		for (const [styleName, style] of Object.entries(group)) {
+			styles[styleName] = {
+				open: `\u001B[${style[0]}m`,
+				close: `\u001B[${style[1]}m`
+			};
+
+			group[styleName] = styles[styleName];
+
+			codes.set(style[0], style[1]);
+		}
+
+		Object.defineProperty(styles, groupName, {
+			value: group,
+			enumerable: false
+		});
+	}
+
+	Object.defineProperty(styles, 'codes', {
+		value: codes,
+		enumerable: false
+	});
+
+	styles.color.close = '\u001B[39m';
+	styles.bgColor.close = '\u001B[49m';
+
+	setLazyProperty(styles.color, 'ansi', () => makeDynamicStyles(wrapAnsi16, 'ansi16', ansi2ansi, false));
+	setLazyProperty(styles.color, 'ansi256', () => makeDynamicStyles(wrapAnsi256, 'ansi256', ansi2ansi, false));
+	setLazyProperty(styles.color, 'ansi16m', () => makeDynamicStyles(wrapAnsi16m, 'rgb', rgb2rgb, false));
+	setLazyProperty(styles.bgColor, 'ansi', () => makeDynamicStyles(wrapAnsi16, 'ansi16', ansi2ansi, true));
+	setLazyProperty(styles.bgColor, 'ansi256', () => makeDynamicStyles(wrapAnsi256, 'ansi256', ansi2ansi, true));
+	setLazyProperty(styles.bgColor, 'ansi16m', () => makeDynamicStyles(wrapAnsi16m, 'rgb', rgb2rgb, true));
+
+	return styles;
+}
+
+// Make the export immutable
+Object.defineProperty(module, 'exports', {
+	enumerable: true,
+	get: assembleStyles
+});
+});
+
+var hasFlag$1 = (flag, argv = process.argv) => {
+	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
+	const position = argv.indexOf(prefix + flag);
+	const terminatorPosition = argv.indexOf('--');
+	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+};
+
+const {env: env$1} = process;
+
+let forceColor$1;
+if (hasFlag$1('no-color') ||
+	hasFlag$1('no-colors') ||
+	hasFlag$1('color=false') ||
+	hasFlag$1('color=never')) {
+	forceColor$1 = 0;
+} else if (hasFlag$1('color') ||
+	hasFlag$1('colors') ||
+	hasFlag$1('color=true') ||
+	hasFlag$1('color=always')) {
+	forceColor$1 = 1;
+}
+
+if ('FORCE_COLOR' in env$1) {
+	if (env$1.FORCE_COLOR === 'true') {
+		forceColor$1 = 1;
+	} else if (env$1.FORCE_COLOR === 'false') {
+		forceColor$1 = 0;
+	} else {
+		forceColor$1 = env$1.FORCE_COLOR.length === 0 ? 1 : Math.min(parseInt(env$1.FORCE_COLOR, 10), 3);
+	}
+}
+
+function translateLevel$1(level) {
+	if (level === 0) {
+		return false;
+	}
+
+	return {
+		level,
+		hasBasic: true,
+		has256: level >= 2,
+		has16m: level >= 3
+	};
+}
+
+function supportsColor$1(haveStream, streamIsTTY) {
+	if (forceColor$1 === 0) {
+		return 0;
+	}
+
+	if (hasFlag$1('color=16m') ||
+		hasFlag$1('color=full') ||
+		hasFlag$1('color=truecolor')) {
+		return 3;
+	}
+
+	if (hasFlag$1('color=256')) {
+		return 2;
+	}
+
+	if (haveStream && !streamIsTTY && forceColor$1 === undefined) {
+		return 0;
+	}
+
+	const min = forceColor$1 || 0;
+
+	if (env$1.TERM === 'dumb') {
+		return min;
+	}
+
+	if (process.platform === 'win32') {
+		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
+		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+		const osRelease = os.release().split('.');
+		if (
+			Number(osRelease[0]) >= 10 &&
+			Number(osRelease[2]) >= 10586
+		) {
+			return Number(osRelease[2]) >= 14931 ? 3 : 2;
+		}
+
+		return 1;
+	}
+
+	if ('CI' in env$1) {
+		if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI'].some(sign => sign in env$1) || env$1.CI_NAME === 'codeship') {
+			return 1;
+		}
+
+		return min;
+	}
+
+	if ('TEAMCITY_VERSION' in env$1) {
+		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env$1.TEAMCITY_VERSION) ? 1 : 0;
+	}
+
+	if ('GITHUB_ACTIONS' in env$1) {
+		return 1;
+	}
+
+	if (env$1.COLORTERM === 'truecolor') {
+		return 3;
+	}
+
+	if ('TERM_PROGRAM' in env$1) {
+		const version = parseInt((env$1.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+
+		switch (env$1.TERM_PROGRAM) {
+			case 'iTerm.app':
+				return version >= 3 ? 3 : 2;
+			case 'Apple_Terminal':
+				return 2;
+			// No default
+		}
+	}
+
+	if (/-256(color)?$/i.test(env$1.TERM)) {
+		return 2;
+	}
+
+	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env$1.TERM)) {
+		return 1;
+	}
+
+	if ('COLORTERM' in env$1) {
+		return 1;
+	}
+
+	return min;
+}
+
+function getSupportLevel$1(stream) {
+	const level = supportsColor$1(stream, stream && stream.isTTY);
+	return translateLevel$1(level);
+}
+
+var supportsColor_1$1 = {
+	supportsColor: getSupportLevel$1,
+	stdout: translateLevel$1(supportsColor$1(true, tty.isatty(1))),
+	stderr: translateLevel$1(supportsColor$1(true, tty.isatty(2)))
+};
+
+const stringReplaceAll = (string, substring, replacer) => {
+	let index = string.indexOf(substring);
+	if (index === -1) {
+		return string;
+	}
+
+	const substringLength = substring.length;
+	let endIndex = 0;
+	let returnValue = '';
+	do {
+		returnValue += string.substr(endIndex, index - endIndex) + substring + replacer;
+		endIndex = index + substringLength;
+		index = string.indexOf(substring, endIndex);
+	} while (index !== -1);
+
+	returnValue += string.substr(endIndex);
+	return returnValue;
+};
+
+const stringEncaseCRLFWithFirstIndex = (string, prefix, postfix, index) => {
+	let endIndex = 0;
+	let returnValue = '';
+	do {
+		const gotCR = string[index - 1] === '\r';
+		returnValue += string.substr(endIndex, (gotCR ? index - 1 : index) - endIndex) + prefix + (gotCR ? '\r\n' : '\n') + postfix;
+		endIndex = index + 1;
+		index = string.indexOf('\n', endIndex);
+	} while (index !== -1);
+
+	returnValue += string.substr(endIndex);
+	return returnValue;
+};
+
+var util = {
+	stringReplaceAll,
+	stringEncaseCRLFWithFirstIndex
+};
+
+const TEMPLATE_REGEX$1 = /(?:\\(u(?:[a-f\d]{4}|\{[a-f\d]{1,6}\})|x[a-f\d]{2}|.))|(?:\{(~)?(\w+(?:\([^)]*\))?(?:\.\w+(?:\([^)]*\))?)*)(?:[ \t]|(?=\r?\n)))|(\})|((?:.|[\r\n\f])+?)/gi;
+const STYLE_REGEX$1 = /(?:^|\.)(\w+)(?:\(([^)]*)\))?/g;
+const STRING_REGEX$1 = /^(['"])((?:\\.|(?!\1)[^\\])*)\1$/;
+const ESCAPE_REGEX$1 = /\\(u(?:[a-f\d]{4}|\{[a-f\d]{1,6}\})|x[a-f\d]{2}|.)|([^\\])/gi;
+
+const ESCAPES$1 = new Map([
+	['n', '\n'],
+	['r', '\r'],
+	['t', '\t'],
+	['b', '\b'],
+	['f', '\f'],
+	['v', '\v'],
+	['0', '\0'],
+	['\\', '\\'],
+	['e', '\u001B'],
+	['a', '\u0007']
+]);
+
+function unescape$1(c) {
+	const u = c[0] === 'u';
+	const bracket = c[1] === '{';
+
+	if ((u && !bracket && c.length === 5) || (c[0] === 'x' && c.length === 3)) {
+		return String.fromCharCode(parseInt(c.slice(1), 16));
+	}
+
+	if (u && bracket) {
+		return String.fromCodePoint(parseInt(c.slice(2, -1), 16));
+	}
+
+	return ESCAPES$1.get(c) || c;
+}
+
+function parseArguments$1(name, arguments_) {
+	const results = [];
+	const chunks = arguments_.trim().split(/\s*,\s*/g);
+	let matches;
+
+	for (const chunk of chunks) {
+		const number = Number(chunk);
+		if (!Number.isNaN(number)) {
+			results.push(number);
+		} else if ((matches = chunk.match(STRING_REGEX$1))) {
+			results.push(matches[2].replace(ESCAPE_REGEX$1, (m, escape, character) => escape ? unescape$1(escape) : character));
+		} else {
+			throw new Error(`Invalid Chalk template style argument: ${chunk} (in style '${name}')`);
+		}
+	}
+
+	return results;
+}
+
+function parseStyle$1(style) {
+	STYLE_REGEX$1.lastIndex = 0;
+
+	const results = [];
+	let matches;
+
+	while ((matches = STYLE_REGEX$1.exec(style)) !== null) {
+		const name = matches[1];
+
+		if (matches[2]) {
+			const args = parseArguments$1(name, matches[2]);
+			results.push([name].concat(args));
+		} else {
+			results.push([name]);
+		}
+	}
+
+	return results;
+}
+
+function buildStyle$1(chalk, styles) {
+	const enabled = {};
+
+	for (const layer of styles) {
+		for (const style of layer.styles) {
+			enabled[style[0]] = layer.inverse ? null : style.slice(1);
+		}
+	}
+
+	let current = chalk;
+	for (const [styleName, styles] of Object.entries(enabled)) {
+		if (!Array.isArray(styles)) {
+			continue;
+		}
+
+		if (!(styleName in current)) {
+			throw new Error(`Unknown Chalk style: ${styleName}`);
+		}
+
+		current = styles.length > 0 ? current[styleName](...styles) : current[styleName];
+	}
+
+	return current;
+}
+
+var templates$1 = (chalk, temporary) => {
+	const styles = [];
+	const chunks = [];
+	let chunk = [];
+
+	// eslint-disable-next-line max-params
+	temporary.replace(TEMPLATE_REGEX$1, (m, escapeCharacter, inverse, style, close, character) => {
+		if (escapeCharacter) {
+			chunk.push(unescape$1(escapeCharacter));
+		} else if (style) {
+			const string = chunk.join('');
+			chunk = [];
+			chunks.push(styles.length === 0 ? string : buildStyle$1(chalk, styles)(string));
+			styles.push({inverse, styles: parseStyle$1(style)});
+		} else if (close) {
+			if (styles.length === 0) {
+				throw new Error('Found extraneous } in Chalk template literal');
+			}
+
+			chunks.push(buildStyle$1(chalk, styles)(chunk.join('')));
+			chunk = [];
+			styles.pop();
+		} else {
+			chunk.push(character);
+		}
+	});
+
+	chunks.push(chunk.join(''));
+
+	if (styles.length > 0) {
+		const errMsg = `Chalk template literal is missing ${styles.length} closing bracket${styles.length === 1 ? '' : 's'} (\`}\`)`;
+		throw new Error(errMsg);
+	}
+
+	return chunks.join('');
+};
+
+const {stdout: stdoutColor, stderr: stderrColor} = supportsColor_1$1;
+const {
+	stringReplaceAll: stringReplaceAll$1,
+	stringEncaseCRLFWithFirstIndex: stringEncaseCRLFWithFirstIndex$1
+} = util;
+
+// `supportsColor.level` → `ansiStyles.color[name]` mapping
+const levelMapping = [
+	'ansi',
+	'ansi',
+	'ansi256',
+	'ansi16m'
+];
+
+const styles = Object.create(null);
+
+const applyOptions = (object, options = {}) => {
+	if (options.level > 3 || options.level < 0) {
+		throw new Error('The `level` option should be an integer from 0 to 3');
+	}
+
+	// Detect level if not set manually
+	const colorLevel = stdoutColor ? stdoutColor.level : 0;
+	object.level = options.level === undefined ? colorLevel : options.level;
+};
+
+class ChalkClass {
+	constructor(options) {
+		return chalkFactory(options);
+	}
+}
+
+const chalkFactory = options => {
+	const chalk = {};
+	applyOptions(chalk, options);
+
+	chalk.template = (...arguments_) => chalkTag(chalk.template, ...arguments_);
+
+	Object.setPrototypeOf(chalk, Chalk.prototype);
+	Object.setPrototypeOf(chalk.template, chalk);
+
+	chalk.template.constructor = () => {
+		throw new Error('`chalk.constructor()` is deprecated. Use `new chalk.Instance()` instead.');
+	};
+
+	chalk.template.Instance = ChalkClass;
+
+	return chalk.template;
+};
+
+function Chalk(options) {
+	return chalkFactory(options);
+}
+
+for (const [styleName, style] of Object.entries(ansiStyles$1)) {
+	styles[styleName] = {
+		get() {
+			const builder = createBuilder(this, createStyler(style.open, style.close, this._styler), this._isEmpty);
+			Object.defineProperty(this, styleName, {value: builder});
+			return builder;
+		}
+	};
+}
+
+styles.visible = {
+	get() {
+		const builder = createBuilder(this, this._styler, true);
+		Object.defineProperty(this, 'visible', {value: builder});
+		return builder;
+	}
+};
+
+const usedModels = ['rgb', 'hex', 'keyword', 'hsl', 'hsv', 'hwb', 'ansi', 'ansi256'];
+
+for (const model of usedModels) {
+	styles[model] = {
+		get() {
+			const {level} = this;
+			return function (...arguments_) {
+				const styler = createStyler(ansiStyles$1.color[levelMapping[level]][model](...arguments_), ansiStyles$1.color.close, this._styler);
+				return createBuilder(this, styler, this._isEmpty);
+			};
+		}
+	};
+}
+
+for (const model of usedModels) {
+	const bgModel = 'bg' + model[0].toUpperCase() + model.slice(1);
+	styles[bgModel] = {
+		get() {
+			const {level} = this;
+			return function (...arguments_) {
+				const styler = createStyler(ansiStyles$1.bgColor[levelMapping[level]][model](...arguments_), ansiStyles$1.bgColor.close, this._styler);
+				return createBuilder(this, styler, this._isEmpty);
+			};
+		}
+	};
+}
+
+const proto = Object.defineProperties(() => {}, {
+	...styles,
+	level: {
+		enumerable: true,
+		get() {
+			return this._generator.level;
+		},
+		set(level) {
+			this._generator.level = level;
+		}
+	}
+});
+
+const createStyler = (open, close, parent) => {
+	let openAll;
+	let closeAll;
+	if (parent === undefined) {
+		openAll = open;
+		closeAll = close;
+	} else {
+		openAll = parent.openAll + open;
+		closeAll = close + parent.closeAll;
+	}
+
+	return {
+		open,
+		close,
+		openAll,
+		closeAll,
+		parent
+	};
+};
+
+const createBuilder = (self, _styler, _isEmpty) => {
+	const builder = (...arguments_) => {
+		// Single argument is hot path, implicit coercion is faster than anything
+		// eslint-disable-next-line no-implicit-coercion
+		return applyStyle(builder, (arguments_.length === 1) ? ('' + arguments_[0]) : arguments_.join(' '));
+	};
+
+	// `__proto__` is used because we must return a function, but there is
+	// no way to create a function with a different prototype
+	builder.__proto__ = proto; // eslint-disable-line no-proto
+
+	builder._generator = self;
+	builder._styler = _styler;
+	builder._isEmpty = _isEmpty;
+
+	return builder;
+};
+
+const applyStyle = (self, string) => {
+	if (self.level <= 0 || !string) {
+		return self._isEmpty ? '' : string;
+	}
+
+	let styler = self._styler;
+
+	if (styler === undefined) {
+		return string;
+	}
+
+	const {openAll, closeAll} = styler;
+	if (string.indexOf('\u001B') !== -1) {
+		while (styler !== undefined) {
+			// Replace any instances already present with a re-opening code
+			// otherwise only the part of the string until said closing code
+			// will be colored, and the rest will simply be 'plain'.
+			string = stringReplaceAll$1(string, styler.close, styler.open);
+
+			styler = styler.parent;
+		}
+	}
+
+	// We can move both next actions out of loop, because remaining actions in loop won't have
+	// any/visible effect on parts we add here. Close the styling before a linebreak and reopen
+	// after next line to fix a bleed issue on macOS: https://github.com/chalk/chalk/pull/92
+	const lfIndex = string.indexOf('\n');
+	if (lfIndex !== -1) {
+		string = stringEncaseCRLFWithFirstIndex$1(string, closeAll, openAll, lfIndex);
+	}
+
+	return openAll + string + closeAll;
+};
+
+let template;
+const chalkTag = (chalk, ...strings) => {
+	const [firstString] = strings;
+
+	if (!Array.isArray(firstString)) {
+		// If chalk() was called by itself or with a string,
+		// return the string itself as a string.
+		return strings.join(' ');
+	}
+
+	const arguments_ = strings.slice(1);
+	const parts = [firstString.raw[0]];
+
+	for (let i = 1; i < firstString.length; i++) {
+		parts.push(
+			String(arguments_[i - 1]).replace(/[{}\\]/g, '\\$&'),
+			String(firstString.raw[i])
+		);
+	}
+
+	if (template === undefined) {
+		template = templates$1;
+	}
+
+	return template(chalk, parts.join(''));
+};
+
+Object.defineProperties(Chalk.prototype, styles);
+
+const chalk$1 = Chalk(); // eslint-disable-line new-cap
+chalk$1.supportsColor = stdoutColor;
+chalk$1.stderr = Chalk({level: stderrColor ? stderrColor.level : 0}); // eslint-disable-line new-cap
+chalk$1.stderr.supportsColor = stderrColor;
+
+// For TypeScript
+chalk$1.Level = {
+	None: 0,
+	Basic: 1,
+	Ansi256: 2,
+	TrueColor: 3,
+	0: 'None',
+	1: 'Basic',
+	2: 'Ansi256',
+	3: 'TrueColor'
+};
+
+var source = chalk$1;
 
 const {platform} = process;
 
@@ -34163,16 +36033,16 @@ var chardet = {
 	detectFileAllSync: detectFileAllSync
 };
 
-var Buffer$1 = buffer$3.Buffer;
+var Buffer$1 = buffer$5.Buffer;
 
 var safer = {};
 
 var key;
 
-for (key in buffer$3) {
-  if (!buffer$3.hasOwnProperty(key)) continue
+for (key in buffer$5) {
+  if (!buffer$5.hasOwnProperty(key)) continue
   if (key === 'SlowBuffer' || key === 'Buffer') continue
-  safer[key] = buffer$3[key];
+  safer[key] = buffer$5[key];
 }
 
 var Safer = safer.Buffer = {};
@@ -44737,7 +46607,7 @@ for (var i = 0; i < modules.length; i++) {
 }
 });
 
-var Buffer$7 = buffer$3.Buffer,
+var Buffer$7 = buffer$5.Buffer,
     Transform = stream$2.Transform;
 
 
@@ -44856,7 +46726,7 @@ IconvLiteDecoderStream.prototype.collect = function(cb) {
     return this;
 };
 
-var Buffer$8 = buffer$3.Buffer;
+var Buffer$8 = buffer$5.Buffer;
 // Note: not polyfilled with safer-buffer on a purpose, as overrides Buffer
 
 // == Extend Node primitives to use iconv-lite =================================
@@ -44889,7 +46759,7 @@ var extendNode = function (iconv) {
         };
 
         // -- SlowBuffer -----------------------------------------------------------
-        var SlowBuffer = buffer$3.SlowBuffer;
+        var SlowBuffer = buffer$5.SlowBuffer;
 
         original.SlowBufferToString = SlowBuffer.prototype.toString;
         SlowBuffer.prototype.toString = function(encoding, start, end) {
@@ -45052,7 +46922,7 @@ var extendNode = function (iconv) {
 
         delete Buffer$8.isNativeEncoding;
 
-        var SlowBuffer = buffer$3.SlowBuffer;
+        var SlowBuffer = buffer$5.SlowBuffer;
 
         SlowBuffer.prototype.toString = original.SlowBufferToString;
         SlowBuffer.prototype.write = original.SlowBufferWrite;
@@ -47776,7 +49646,7 @@ var safeBuffer = createCommonjsModule(function (module, exports) {
 /*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> */
 /* eslint-disable node/no-deprecated-api */
 
-var Buffer = buffer$3.Buffer;
+var Buffer = buffer$5.Buffer;
 
 // alternative to using Object.keys for old browsers
 function copyProps (src, dst) {
@@ -47785,10 +49655,10 @@ function copyProps (src, dst) {
   }
 }
 if (Buffer.from && Buffer.alloc && Buffer.allocUnsafe && Buffer.allocUnsafeSlow) {
-  module.exports = buffer$3;
+  module.exports = buffer$5;
 } else {
   // Copy properties from require('buffer')
-  copyProps(buffer$3, exports);
+  copyProps(buffer$5, exports);
   exports.Buffer = SafeBuffer;
 }
 
@@ -47836,7 +49706,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   if (typeof size !== 'number') {
     throw new TypeError('Argument must be a number')
   }
-  return buffer$3.SlowBuffer(size)
+  return buffer$5.SlowBuffer(size)
 };
 });
 var safeBuffer_1 = safeBuffer.Buffer;
@@ -48144,7 +50014,7 @@ var caw = (proxy, opts) => {
 var safeBuffer$1 = createCommonjsModule(function (module, exports) {
 /* eslint-disable node/no-deprecated-api */
 
-var Buffer = buffer$3.Buffer;
+var Buffer = buffer$5.Buffer;
 
 // alternative to using Object.keys for old browsers
 function copyProps (src, dst) {
@@ -48153,10 +50023,10 @@ function copyProps (src, dst) {
   }
 }
 if (Buffer.from && Buffer.alloc && Buffer.allocUnsafe && Buffer.allocUnsafeSlow) {
-  module.exports = buffer$3;
+  module.exports = buffer$5;
 } else {
   // Copy properties from require('buffer')
-  copyProps(buffer$3, exports);
+  copyProps(buffer$5, exports);
   exports.Buffer = SafeBuffer;
 }
 
@@ -48202,7 +50072,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   if (typeof size !== 'number') {
     throw new TypeError('Argument must be a number')
   }
-  return buffer$3.SlowBuffer(size)
+  return buffer$5.SlowBuffer(size)
 };
 });
 var safeBuffer_1$1 = safeBuffer$1.Buffer;
@@ -50686,7 +52556,7 @@ var stream = stream$2;
 var safeBuffer$2 = createCommonjsModule(function (module, exports) {
 /* eslint-disable node/no-deprecated-api */
 
-var Buffer = buffer$3.Buffer;
+var Buffer = buffer$5.Buffer;
 
 // alternative to using Object.keys for old browsers
 function copyProps (src, dst) {
@@ -50695,10 +52565,10 @@ function copyProps (src, dst) {
   }
 }
 if (Buffer.from && Buffer.alloc && Buffer.allocUnsafe && Buffer.allocUnsafeSlow) {
-  module.exports = buffer$3;
+  module.exports = buffer$5;
 } else {
   // Copy properties from require('buffer')
-  copyProps(buffer$3, exports);
+  copyProps(buffer$5, exports);
   exports.Buffer = SafeBuffer;
 }
 
@@ -50744,7 +52614,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   if (typeof size !== 'number') {
     throw new TypeError('Argument must be a number')
   }
-  return buffer$3.SlowBuffer(size)
+  return buffer$5.SlowBuffer(size)
 };
 });
 var safeBuffer_1$2 = safeBuffer$2.Buffer;
@@ -51837,7 +53707,7 @@ Duplex$1.prototype._destroy = function (err, cb) {
 var safeBuffer$3 = createCommonjsModule(function (module, exports) {
 /* eslint-disable node/no-deprecated-api */
 
-var Buffer = buffer$3.Buffer;
+var Buffer = buffer$5.Buffer;
 
 // alternative to using Object.keys for old browsers
 function copyProps (src, dst) {
@@ -51846,10 +53716,10 @@ function copyProps (src, dst) {
   }
 }
 if (Buffer.from && Buffer.alloc && Buffer.allocUnsafe && Buffer.allocUnsafeSlow) {
-  module.exports = buffer$3;
+  module.exports = buffer$5;
 } else {
   // Copy properties from require('buffer')
-  copyProps(buffer$3, exports);
+  copyProps(buffer$5, exports);
   exports.Buffer = SafeBuffer;
 }
 
@@ -51895,7 +53765,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   if (typeof size !== 'number') {
     throw new TypeError('Argument must be a number')
   }
-  return buffer$3.SlowBuffer(size)
+  return buffer$5.SlowBuffer(size)
 };
 });
 var safeBuffer_1$3 = safeBuffer$3.Buffer;
@@ -55709,139 +57579,67 @@ var crc32 = (function() {
   return CRC32;
 })();
 
-var _args = [
-	[
-		"seek-bzip@1.0.5",
-		"/Users/l.rain/Documents/workspace/fanstuan/packages/cli"
-	]
-];
-var _from = "seek-bzip@1.0.5";
-var _id = "seek-bzip@1.0.5";
-var _inBundle = false;
-var _integrity = "sha1-z+kXyz0nS8/6x5J1ivUxc+sfq9w=";
-var _location = "/seek-bzip";
-var _phantomChildren = {
-	"graceful-readlink": "1.0.1"
-};
-var _requested = {
-	type: "version",
-	registry: true,
-	raw: "seek-bzip@1.0.5",
-	name: "seek-bzip",
-	escapedName: "seek-bzip",
-	rawSpec: "1.0.5",
-	saveSpec: null,
-	fetchSpec: "1.0.5"
-};
-var _requiredBy = [
-	"/decompress-tarbz2"
-];
-var _resolved = "https://registry.npm.taobao.org/seek-bzip/download/seek-bzip-1.0.5.tgz";
-var _spec = "1.0.5";
-var _where = "/Users/l.rain/Documents/workspace/fanstuan/packages/cli";
-var bin = {
-	"seek-bunzip": "bin/seek-bunzip",
-	"seek-table": "bin/seek-bzip-table"
-};
-var bugs = {
-	url: "https://github.com/cscott/seek-bzip/issues"
-};
+var name = "seek-bzip";
+var version$1 = "1.0.5";
 var contributors = [
-	{
-		name: "C. Scott Ananian",
-		url: "http://cscott.net"
-	},
-	{
-		name: "Eli Skeggs"
-	},
-	{
-		name: "Kevin Kwok"
-	},
-	{
-		name: "Rob Landley",
-		url: "http://landley.net"
-	}
+	"C. Scott Ananian (http://cscott.net)",
+	"Eli Skeggs",
+	"Kevin Kwok",
+	"Rob Landley (http://landley.net)"
 ];
-var dependencies = {
-	commander: "~2.8.1"
-};
 var description = "a pure-JavaScript Node.JS module for random-access decoding bzip2 data";
-var devDependencies = {
-	fibers: "~1.0.6",
-	mocha: "~2.2.5"
+var main$2 = "./lib/index.js";
+var repository = {
+	type: "git",
+	url: "https://github.com/cscott/seek-bzip.git"
+};
+var license = "MIT";
+var bin = {
+	"seek-bunzip": "./bin/seek-bunzip",
+	"seek-table": "./bin/seek-bzip-table"
 };
 var directories = {
 	test: "test"
 };
-var homepage = "https://github.com/cscott/seek-bzip#readme";
-var license = "MIT";
-var main$2 = "./lib/index.js";
-var name = "seek-bzip";
-var repository = {
-	type: "git",
-	url: "git+https://github.com/cscott/seek-bzip.git"
+var dependencies = {
+	commander: "~2.8.1"
+};
+var devDependencies = {
+	fibers: "~1.0.6",
+	mocha: "~2.2.5"
 };
 var scripts = {
 	test: "mocha"
 };
-var version$1 = "1.0.5";
 var _package = {
-	_args: _args,
-	_from: _from,
-	_id: _id,
-	_inBundle: _inBundle,
-	_integrity: _integrity,
-	_location: _location,
-	_phantomChildren: _phantomChildren,
-	_requested: _requested,
-	_requiredBy: _requiredBy,
-	_resolved: _resolved,
-	_spec: _spec,
-	_where: _where,
-	bin: bin,
-	bugs: bugs,
-	contributors: contributors,
-	dependencies: dependencies,
-	description: description,
-	devDependencies: devDependencies,
-	directories: directories,
-	homepage: homepage,
-	license: license,
-	main: main$2,
 	name: name,
+	version: version$1,
+	contributors: contributors,
+	description: description,
+	main: main$2,
 	repository: repository,
-	scripts: scripts,
-	version: version$1
+	license: license,
+	bin: bin,
+	directories: directories,
+	dependencies: dependencies,
+	devDependencies: devDependencies,
+	scripts: scripts
 };
 
 var _package$1 = /*#__PURE__*/Object.freeze({
 	__proto__: null,
-	_args: _args,
-	_from: _from,
-	_id: _id,
-	_inBundle: _inBundle,
-	_integrity: _integrity,
-	_location: _location,
-	_phantomChildren: _phantomChildren,
-	_requested: _requested,
-	_requiredBy: _requiredBy,
-	_resolved: _resolved,
-	_spec: _spec,
-	_where: _where,
-	bin: bin,
-	bugs: bugs,
-	contributors: contributors,
-	dependencies: dependencies,
-	description: description,
-	devDependencies: devDependencies,
-	directories: directories,
-	homepage: homepage,
-	license: license,
-	main: main$2,
 	name: name,
-	repository: repository,
-	scripts: scripts,
 	version: version$1,
+	contributors: contributors,
+	description: description,
+	main: main$2,
+	repository: repository,
+	license: license,
+	bin: bin,
+	directories: directories,
+	dependencies: dependencies,
+	devDependencies: devDependencies,
+	scripts: scripts,
 	'default': _package
 });
 
@@ -56956,570 +58754,12 @@ var decompressTarbz2 = () => input => {
 	return decompressTar()(input.pipe(unbzip2Stream_1()));
 };
 
-var fileType$3 = input => {
-	const buf = new Uint8Array(input);
-
-	if (!(buf && buf.length > 1)) {
-		return null;
-	}
-
-	const check = (header, opts) => {
-		opts = Object.assign({
-			offset: 0
-		}, opts);
-
-		for (let i = 0; i < header.length; i++) {
-			if (header[i] !== buf[i + opts.offset]) {
-				return false;
-			}
-		}
-
-		return true;
-	};
-
-	if (check([0xFF, 0xD8, 0xFF])) {
-		return {
-			ext: 'jpg',
-			mime: 'image/jpeg'
-		};
-	}
-
-	if (check([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])) {
-		return {
-			ext: 'png',
-			mime: 'image/png'
-		};
-	}
-
-	if (check([0x47, 0x49, 0x46])) {
-		return {
-			ext: 'gif',
-			mime: 'image/gif'
-		};
-	}
-
-	if (check([0x57, 0x45, 0x42, 0x50], {offset: 8})) {
-		return {
-			ext: 'webp',
-			mime: 'image/webp'
-		};
-	}
-
-	if (check([0x46, 0x4C, 0x49, 0x46])) {
-		return {
-			ext: 'flif',
-			mime: 'image/flif'
-		};
-	}
-
-	// Needs to be before `tif` check
-	if (
-		(check([0x49, 0x49, 0x2A, 0x0]) || check([0x4D, 0x4D, 0x0, 0x2A])) &&
-		check([0x43, 0x52], {offset: 8})
-	) {
-		return {
-			ext: 'cr2',
-			mime: 'image/x-canon-cr2'
-		};
-	}
-
-	if (
-		check([0x49, 0x49, 0x2A, 0x0]) ||
-		check([0x4D, 0x4D, 0x0, 0x2A])
-	) {
-		return {
-			ext: 'tif',
-			mime: 'image/tiff'
-		};
-	}
-
-	if (check([0x42, 0x4D])) {
-		return {
-			ext: 'bmp',
-			mime: 'image/bmp'
-		};
-	}
-
-	if (check([0x49, 0x49, 0xBC])) {
-		return {
-			ext: 'jxr',
-			mime: 'image/vnd.ms-photo'
-		};
-	}
-
-	if (check([0x38, 0x42, 0x50, 0x53])) {
-		return {
-			ext: 'psd',
-			mime: 'image/vnd.adobe.photoshop'
-		};
-	}
-
-	// Needs to be before the `zip` check
-	if (
-		check([0x50, 0x4B, 0x3, 0x4]) &&
-		check([0x6D, 0x69, 0x6D, 0x65, 0x74, 0x79, 0x70, 0x65, 0x61, 0x70, 0x70, 0x6C, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6F, 0x6E, 0x2F, 0x65, 0x70, 0x75, 0x62, 0x2B, 0x7A, 0x69, 0x70], {offset: 30})
-	) {
-		return {
-			ext: 'epub',
-			mime: 'application/epub+zip'
-		};
-	}
-
-	// Needs to be before `zip` check
-	// Assumes signed `.xpi` from addons.mozilla.org
-	if (
-		check([0x50, 0x4B, 0x3, 0x4]) &&
-		check([0x4D, 0x45, 0x54, 0x41, 0x2D, 0x49, 0x4E, 0x46, 0x2F, 0x6D, 0x6F, 0x7A, 0x69, 0x6C, 0x6C, 0x61, 0x2E, 0x72, 0x73, 0x61], {offset: 30})
-	) {
-		return {
-			ext: 'xpi',
-			mime: 'application/x-xpinstall'
-		};
-	}
-
-	if (
-		check([0x50, 0x4B]) &&
-		(buf[2] === 0x3 || buf[2] === 0x5 || buf[2] === 0x7) &&
-		(buf[3] === 0x4 || buf[3] === 0x6 || buf[3] === 0x8)
-	) {
-		return {
-			ext: 'zip',
-			mime: 'application/zip'
-		};
-	}
-
-	if (check([0x75, 0x73, 0x74, 0x61, 0x72], {offset: 257})) {
-		return {
-			ext: 'tar',
-			mime: 'application/x-tar'
-		};
-	}
-
-	if (
-		check([0x52, 0x61, 0x72, 0x21, 0x1A, 0x7]) &&
-		(buf[6] === 0x0 || buf[6] === 0x1)
-	) {
-		return {
-			ext: 'rar',
-			mime: 'application/x-rar-compressed'
-		};
-	}
-
-	if (check([0x1F, 0x8B, 0x8])) {
-		return {
-			ext: 'gz',
-			mime: 'application/gzip'
-		};
-	}
-
-	if (check([0x42, 0x5A, 0x68])) {
-		return {
-			ext: 'bz2',
-			mime: 'application/x-bzip2'
-		};
-	}
-
-	if (check([0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C])) {
-		return {
-			ext: '7z',
-			mime: 'application/x-7z-compressed'
-		};
-	}
-
-	if (check([0x78, 0x01])) {
-		return {
-			ext: 'dmg',
-			mime: 'application/x-apple-diskimage'
-		};
-	}
-
-	if (
-		(
-			check([0x0, 0x0, 0x0]) &&
-			(buf[3] === 0x18 || buf[3] === 0x20) &&
-			check([0x66, 0x74, 0x79, 0x70], {offset: 4})
-		) ||
-		check([0x33, 0x67, 0x70, 0x35]) ||
-		(
-			check([0x0, 0x0, 0x0, 0x1C, 0x66, 0x74, 0x79, 0x70, 0x6D, 0x70, 0x34, 0x32]) &&
-			check([0x6D, 0x70, 0x34, 0x31, 0x6D, 0x70, 0x34, 0x32, 0x69, 0x73, 0x6F, 0x6D], {offset: 16})
-		) ||
-		check([0x0, 0x0, 0x0, 0x1C, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D]) ||
-		check([0x0, 0x0, 0x0, 0x1C, 0x66, 0x74, 0x79, 0x70, 0x6D, 0x70, 0x34, 0x32, 0x0, 0x0, 0x0, 0x0])
-	) {
-		return {
-			ext: 'mp4',
-			mime: 'video/mp4'
-		};
-	}
-
-	if (check([0x0, 0x0, 0x0, 0x1C, 0x66, 0x74, 0x79, 0x70, 0x4D, 0x34, 0x56])) {
-		return {
-			ext: 'm4v',
-			mime: 'video/x-m4v'
-		};
-	}
-
-	if (check([0x4D, 0x54, 0x68, 0x64])) {
-		return {
-			ext: 'mid',
-			mime: 'audio/midi'
-		};
-	}
-
-	// https://github.com/threatstack/libmagic/blob/master/magic/Magdir/matroska
-	if (check([0x1A, 0x45, 0xDF, 0xA3])) {
-		const sliced = buf.subarray(4, 4 + 4096);
-		const idPos = sliced.findIndex((el, i, arr) => arr[i] === 0x42 && arr[i + 1] === 0x82);
-
-		if (idPos >= 0) {
-			const docTypePos = idPos + 3;
-			const findDocType = type => Array.from(type).every((c, i) => sliced[docTypePos + i] === c.charCodeAt(0));
-
-			if (findDocType('matroska')) {
-				return {
-					ext: 'mkv',
-					mime: 'video/x-matroska'
-				};
-			}
-
-			if (findDocType('webm')) {
-				return {
-					ext: 'webm',
-					mime: 'video/webm'
-				};
-			}
-		}
-	}
-
-	if (check([0x0, 0x0, 0x0, 0x14, 0x66, 0x74, 0x79, 0x70, 0x71, 0x74, 0x20, 0x20]) ||
-		check([0x66, 0x72, 0x65, 0x65], {offset: 4}) ||
-		check([0x66, 0x74, 0x79, 0x70, 0x71, 0x74, 0x20, 0x20], {offset: 4}) ||
-		check([0x6D, 0x64, 0x61, 0x74], {offset: 4}) || // MJPEG
-		check([0x77, 0x69, 0x64, 0x65], {offset: 4})) {
-		return {
-			ext: 'mov',
-			mime: 'video/quicktime'
-		};
-	}
-
-	if (
-		check([0x52, 0x49, 0x46, 0x46]) &&
-		check([0x41, 0x56, 0x49], {offset: 8})
-	) {
-		return {
-			ext: 'avi',
-			mime: 'video/x-msvideo'
-		};
-	}
-
-	if (check([0x30, 0x26, 0xB2, 0x75, 0x8E, 0x66, 0xCF, 0x11, 0xA6, 0xD9])) {
-		return {
-			ext: 'wmv',
-			mime: 'video/x-ms-wmv'
-		};
-	}
-
-	if (check([0x0, 0x0, 0x1, 0xBA])) {
-		return {
-			ext: 'mpg',
-			mime: 'video/mpeg'
-		};
-	}
-
-	if (
-		check([0x49, 0x44, 0x33]) ||
-		check([0xFF, 0xFB])
-	) {
-		return {
-			ext: 'mp3',
-			mime: 'audio/mpeg'
-		};
-	}
-
-	if (
-		check([0x66, 0x74, 0x79, 0x70, 0x4D, 0x34, 0x41], {offset: 4}) ||
-		check([0x4D, 0x34, 0x41, 0x20])
-	) {
-		return {
-			ext: 'm4a',
-			mime: 'audio/m4a'
-		};
-	}
-
-	// Needs to be before `ogg` check
-	if (check([0x4F, 0x70, 0x75, 0x73, 0x48, 0x65, 0x61, 0x64], {offset: 28})) {
-		return {
-			ext: 'opus',
-			mime: 'audio/opus'
-		};
-	}
-
-	if (check([0x4F, 0x67, 0x67, 0x53])) {
-		return {
-			ext: 'ogg',
-			mime: 'audio/ogg'
-		};
-	}
-
-	if (check([0x66, 0x4C, 0x61, 0x43])) {
-		return {
-			ext: 'flac',
-			mime: 'audio/x-flac'
-		};
-	}
-
-	if (
-		check([0x52, 0x49, 0x46, 0x46]) &&
-		check([0x57, 0x41, 0x56, 0x45], {offset: 8})
-	) {
-		return {
-			ext: 'wav',
-			mime: 'audio/x-wav'
-		};
-	}
-
-	if (check([0x23, 0x21, 0x41, 0x4D, 0x52, 0x0A])) {
-		return {
-			ext: 'amr',
-			mime: 'audio/amr'
-		};
-	}
-
-	if (check([0x25, 0x50, 0x44, 0x46])) {
-		return {
-			ext: 'pdf',
-			mime: 'application/pdf'
-		};
-	}
-
-	if (check([0x4D, 0x5A])) {
-		return {
-			ext: 'exe',
-			mime: 'application/x-msdownload'
-		};
-	}
-
-	if (
-		(buf[0] === 0x43 || buf[0] === 0x46) &&
-		check([0x57, 0x53], {offset: 1})
-	) {
-		return {
-			ext: 'swf',
-			mime: 'application/x-shockwave-flash'
-		};
-	}
-
-	if (check([0x7B, 0x5C, 0x72, 0x74, 0x66])) {
-		return {
-			ext: 'rtf',
-			mime: 'application/rtf'
-		};
-	}
-
-	if (check([0x00, 0x61, 0x73, 0x6D])) {
-		return {
-			ext: 'wasm',
-			mime: 'application/wasm'
-		};
-	}
-
-	if (
-		check([0x77, 0x4F, 0x46, 0x46]) &&
-		(
-			check([0x00, 0x01, 0x00, 0x00], {offset: 4}) ||
-			check([0x4F, 0x54, 0x54, 0x4F], {offset: 4})
-		)
-	) {
-		return {
-			ext: 'woff',
-			mime: 'font/woff'
-		};
-	}
-
-	if (
-		check([0x77, 0x4F, 0x46, 0x32]) &&
-		(
-			check([0x00, 0x01, 0x00, 0x00], {offset: 4}) ||
-			check([0x4F, 0x54, 0x54, 0x4F], {offset: 4})
-		)
-	) {
-		return {
-			ext: 'woff2',
-			mime: 'font/woff2'
-		};
-	}
-
-	if (
-		check([0x4C, 0x50], {offset: 34}) &&
-		(
-			check([0x00, 0x00, 0x01], {offset: 8}) ||
-			check([0x01, 0x00, 0x02], {offset: 8}) ||
-			check([0x02, 0x00, 0x02], {offset: 8})
-		)
-	) {
-		return {
-			ext: 'eot',
-			mime: 'application/octet-stream'
-		};
-	}
-
-	if (check([0x00, 0x01, 0x00, 0x00, 0x00])) {
-		return {
-			ext: 'ttf',
-			mime: 'font/ttf'
-		};
-	}
-
-	if (check([0x4F, 0x54, 0x54, 0x4F, 0x00])) {
-		return {
-			ext: 'otf',
-			mime: 'font/otf'
-		};
-	}
-
-	if (check([0x00, 0x00, 0x01, 0x00])) {
-		return {
-			ext: 'ico',
-			mime: 'image/x-icon'
-		};
-	}
-
-	if (check([0x46, 0x4C, 0x56, 0x01])) {
-		return {
-			ext: 'flv',
-			mime: 'video/x-flv'
-		};
-	}
-
-	if (check([0x25, 0x21])) {
-		return {
-			ext: 'ps',
-			mime: 'application/postscript'
-		};
-	}
-
-	if (check([0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00])) {
-		return {
-			ext: 'xz',
-			mime: 'application/x-xz'
-		};
-	}
-
-	if (check([0x53, 0x51, 0x4C, 0x69])) {
-		return {
-			ext: 'sqlite',
-			mime: 'application/x-sqlite3'
-		};
-	}
-
-	if (check([0x4E, 0x45, 0x53, 0x1A])) {
-		return {
-			ext: 'nes',
-			mime: 'application/x-nintendo-nes-rom'
-		};
-	}
-
-	if (check([0x43, 0x72, 0x32, 0x34])) {
-		return {
-			ext: 'crx',
-			mime: 'application/x-google-chrome-extension'
-		};
-	}
-
-	if (
-		check([0x4D, 0x53, 0x43, 0x46]) ||
-		check([0x49, 0x53, 0x63, 0x28])
-	) {
-		return {
-			ext: 'cab',
-			mime: 'application/vnd.ms-cab-compressed'
-		};
-	}
-
-	// Needs to be before `ar` check
-	if (check([0x21, 0x3C, 0x61, 0x72, 0x63, 0x68, 0x3E, 0x0A, 0x64, 0x65, 0x62, 0x69, 0x61, 0x6E, 0x2D, 0x62, 0x69, 0x6E, 0x61, 0x72, 0x79])) {
-		return {
-			ext: 'deb',
-			mime: 'application/x-deb'
-		};
-	}
-
-	if (check([0x21, 0x3C, 0x61, 0x72, 0x63, 0x68, 0x3E])) {
-		return {
-			ext: 'ar',
-			mime: 'application/x-unix-archive'
-		};
-	}
-
-	if (check([0xED, 0xAB, 0xEE, 0xDB])) {
-		return {
-			ext: 'rpm',
-			mime: 'application/x-rpm'
-		};
-	}
-
-	if (
-		check([0x1F, 0xA0]) ||
-		check([0x1F, 0x9D])
-	) {
-		return {
-			ext: 'Z',
-			mime: 'application/x-compress'
-		};
-	}
-
-	if (check([0x4C, 0x5A, 0x49, 0x50])) {
-		return {
-			ext: 'lz',
-			mime: 'application/x-lzip'
-		};
-	}
-
-	if (check([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])) {
-		return {
-			ext: 'msi',
-			mime: 'application/x-msi'
-		};
-	}
-
-	if (check([0x06, 0x0E, 0x2B, 0x34, 0x02, 0x05, 0x01, 0x01, 0x0D, 0x01, 0x02, 0x01, 0x01, 0x02])) {
-		return {
-			ext: 'mxf',
-			mime: 'application/mxf'
-		};
-	}
-
-	if (check([0x47], {offset: 4}) && (check([0x47], {offset: 192}) || check([0x47], {offset: 196}))) {
-		return {
-			ext: 'mts',
-			mime: 'video/mp2t'
-		};
-	}
-
-	if (check([0x42, 0x4C, 0x45, 0x4E, 0x44, 0x45, 0x52])) {
-		return {
-			ext: 'blend',
-			mime: 'application/x-blender'
-		};
-	}
-
-	if (check([0x42, 0x50, 0x47, 0xFB])) {
-		return {
-			ext: 'bpg',
-			mime: 'image/bpg'
-		};
-	}
-
-	return null;
-};
-
 var decompressTargz = () => input => {
 	if (!Buffer.isBuffer(input) && !isStream_1(input)) {
 		return Promise.reject(new TypeError(`Expected a Buffer or Stream, got ${typeof input}`));
 	}
 
-	if (Buffer.isBuffer(input) && (!fileType$3(input) || fileType$3(input).ext !== 'gz')) {
+	if (Buffer.isBuffer(input) && (!fileType$1(input) || fileType$1(input).ext !== 'gz')) {
 		return Promise.resolve([]);
 	}
 
@@ -57535,7 +58775,7 @@ var decompressTargz = () => input => {
 	return result;
 };
 
-var fileType$4 = function (buf) {
+var fileType$3 = function (buf) {
 	if (!(buf && buf.length > 1)) {
 		return null;
 	}
@@ -58908,7 +60148,7 @@ var fdSlicer = {
 	FdSlicer: FdSlicer_1
 };
 
-var Buffer$f = buffer$3.Buffer;
+var Buffer$f = buffer$5.Buffer;
 
 var CRC_TABLE = [
   0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419,
@@ -59898,7 +61138,7 @@ var decompressUnzip = () => buf => {
 		return Promise.reject(new TypeError(`Expected a Buffer, got ${typeof buf}`));
 	}
 
-	if (!fileType$4(buf) || fileType$4(buf).ext !== 'zip') {
+	if (!fileType$3(buf) || fileType$3(buf).ext !== 'zip') {
 		return Promise.resolve([]);
 	}
 
@@ -61099,6 +62339,108 @@ var normalizeUrl = (str, opts) => {
 	return str;
 };
 
+const PassThrough$6 = stream$2.PassThrough;
+
+var bufferStream$2 = opts => {
+	opts = Object.assign({}, opts);
+
+	const array = opts.array;
+	let encoding = opts.encoding;
+	const buffer = encoding === 'buffer';
+	let objectMode = false;
+
+	if (array) {
+		objectMode = !(encoding || buffer);
+	} else {
+		encoding = encoding || 'utf8';
+	}
+
+	if (buffer) {
+		encoding = null;
+	}
+
+	let len = 0;
+	const ret = [];
+	const stream = new PassThrough$6({objectMode});
+
+	if (encoding) {
+		stream.setEncoding(encoding);
+	}
+
+	stream.on('data', chunk => {
+		ret.push(chunk);
+
+		if (objectMode) {
+			len = ret.length;
+		} else {
+			len += chunk.length;
+		}
+	});
+
+	stream.getBufferedValue = () => {
+		if (array) {
+			return ret;
+		}
+
+		return buffer ? Buffer.concat(ret, len) : ret.join('');
+	};
+
+	stream.getBufferedLength = () => len;
+
+	return stream;
+};
+
+function getStream$2(inputStream, opts) {
+	if (!inputStream) {
+		return Promise.reject(new Error('Expected a stream'));
+	}
+
+	opts = Object.assign({maxBuffer: Infinity}, opts);
+
+	const maxBuffer = opts.maxBuffer;
+	let stream;
+	let clean;
+
+	const p = new Promise((resolve, reject) => {
+		const error = err => {
+			if (err) { // null check
+				err.bufferedData = stream.getBufferedValue();
+			}
+
+			reject(err);
+		};
+
+		stream = bufferStream$2(opts);
+		inputStream.once('error', error);
+		inputStream.pipe(stream);
+
+		stream.on('data', () => {
+			if (stream.getBufferedLength() > maxBuffer) {
+				reject(new Error('maxBuffer exceeded'));
+			}
+		});
+		stream.once('error', error);
+		stream.on('end', resolve);
+
+		clean = () => {
+			// some streams doesn't implement the `stream.Readable` interface correctly
+			if (inputStream.unpipe) {
+				inputStream.unpipe(stream);
+			}
+		};
+	});
+
+	p.then(clean, clean);
+
+	return p.then(() => stream.getBufferedValue());
+}
+
+var getStream_1$2 = getStream$2;
+var buffer$3 = (stream, opts) => getStream$2(stream, Object.assign({}, opts, {encoding: 'buffer'}));
+var array$2 = (stream, opts) => getStream$2(stream, Object.assign({}, opts, {array: true}));
+getStream_1$2.buffer = buffer$3;
+getStream_1$2.array = array$2;
+
 // rfc7231 6.1
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -61744,7 +63086,7 @@ var mimicResponse = (fromStream, toStream) => {
 	}
 };
 
-const PassThrough$6 = stream$2.PassThrough;
+const PassThrough$7 = stream$2.PassThrough;
 
 
 const cloneResponse = response => {
@@ -61752,7 +63094,7 @@ const cloneResponse = response => {
 		throw new TypeError('Parameter `response` must be a response stream.');
 	}
 
-	const clone = new PassThrough$6();
+	const clone = new PassThrough$7();
 	mimicResponse(response, clone);
 
 	return response.pipe(clone);
@@ -61966,7 +63308,7 @@ class CacheableRequest {
 					let clonedResponse;
 					if (opts.cache && response.cachePolicy.storable()) {
 						clonedResponse = src$1(response);
-						getStream_1$1.buffer(response)
+						getStream_1$2.buffer(response)
 							.then(body => {
 								const value = {
 									cachePolicy: response.cachePolicy.toObject(),
@@ -62538,6 +63880,108 @@ module.exports.default = is;
 
 unwrapExports(dist);
 
+const PassThrough$8 = stream$2.PassThrough;
+
+var bufferStream$3 = opts => {
+	opts = Object.assign({}, opts);
+
+	const array = opts.array;
+	let encoding = opts.encoding;
+	const buffer = encoding === 'buffer';
+	let objectMode = false;
+
+	if (array) {
+		objectMode = !(encoding || buffer);
+	} else {
+		encoding = encoding || 'utf8';
+	}
+
+	if (buffer) {
+		encoding = null;
+	}
+
+	let len = 0;
+	const ret = [];
+	const stream = new PassThrough$8({objectMode});
+
+	if (encoding) {
+		stream.setEncoding(encoding);
+	}
+
+	stream.on('data', chunk => {
+		ret.push(chunk);
+
+		if (objectMode) {
+			len = ret.length;
+		} else {
+			len += chunk.length;
+		}
+	});
+
+	stream.getBufferedValue = () => {
+		if (array) {
+			return ret;
+		}
+
+		return buffer ? Buffer.concat(ret, len) : ret.join('');
+	};
+
+	stream.getBufferedLength = () => len;
+
+	return stream;
+};
+
+function getStream$3(inputStream, opts) {
+	if (!inputStream) {
+		return Promise.reject(new Error('Expected a stream'));
+	}
+
+	opts = Object.assign({maxBuffer: Infinity}, opts);
+
+	const maxBuffer = opts.maxBuffer;
+	let stream;
+	let clean;
+
+	const p = new Promise((resolve, reject) => {
+		const error = err => {
+			if (err) { // null check
+				err.bufferedData = stream.getBufferedValue();
+			}
+
+			reject(err);
+		};
+
+		stream = bufferStream$3(opts);
+		inputStream.once('error', error);
+		inputStream.pipe(stream);
+
+		stream.on('data', () => {
+			if (stream.getBufferedLength() > maxBuffer) {
+				reject(new Error('maxBuffer exceeded'));
+			}
+		});
+		stream.once('error', error);
+		stream.on('end', resolve);
+
+		clean = () => {
+			// some streams doesn't implement the `stream.Readable` interface correctly
+			if (inputStream.unpipe) {
+				inputStream.unpipe(stream);
+			}
+		};
+	});
+
+	p.then(clean, clean);
+
+	return p.then(() => stream.getBufferedValue());
+}
+
+var getStream_1$3 = getStream$3;
+var buffer$4 = (stream, opts) => getStream$3(stream, Object.assign({}, opts, {encoding: 'buffer'}));
+var array$3 = (stream, opts) => getStream$3(stream, Object.assign({}, opts, {array: true}));
+getStream_1$3.buffer = buffer$4;
+getStream_1$3.array = array$3;
+
 var timedOut = function (req, time) {
 	if (req.timeoutTimer) {
 		return req;
@@ -62601,7 +64045,7 @@ var urlParseLax = (input, options) => {
 	return url.parse(finalUrl);
 };
 
-const PassThrough$7 = stream$2.PassThrough;
+const PassThrough$9 = stream$2.PassThrough;
 
 
 
@@ -62612,7 +64056,7 @@ var decompressResponse = response => {
 	}
 
 	const unzip = zlib.createUnzip();
-	const stream = new PassThrough$7();
+	const stream = new PassThrough$9();
 
 	mimicResponse(response, stream);
 
@@ -62837,45 +64281,57 @@ var pTimeout = (promise, ms, fallback) => new Promise((resolve, reject) => {
 var TimeoutError_1 = TimeoutError$1;
 pTimeout.TimeoutError = TimeoutError_1;
 
-var _args$1 = [
-	[
-		"got@8.3.2",
-		"/Users/l.rain/Documents/workspace/fanstuan/packages/cli"
-	]
+var name$1 = "got";
+var version$2 = "8.3.2";
+var description$1 = "Simplified HTTP requests";
+var license$1 = "MIT";
+var repository$1 = "sindresorhus/got";
+var maintainers = [
+	{
+		name: "Sindre Sorhus",
+		email: "sindresorhus@gmail.com",
+		url: "sindresorhus.com"
+	},
+	{
+		name: "Vsevolod Strukchinsky",
+		email: "floatdrop@gmail.com",
+		url: "github.com/floatdrop"
+	},
+	{
+		name: "Alexander Tesfamichael",
+		email: "alex.tesfamichael@gmail.com",
+		url: "alextes.me"
+	}
 ];
-var _from$1 = "got@8.3.2";
-var _id$1 = "got@8.3.2";
-var _inBundle$1 = false;
-var _integrity$1 = "sha1-HSP2Q5Dpf3dsrFLluTbl9RTS6Tc=";
-var _location$1 = "/got";
-var _phantomChildren$1 = {
+var engines = {
+	node: ">=4"
 };
-var _requested$1 = {
-	type: "version",
-	registry: true,
-	raw: "got@8.3.2",
-	name: "got",
-	escapedName: "got",
-	rawSpec: "8.3.2",
-	saveSpec: null,
-	fetchSpec: "8.3.2"
+var scripts$1 = {
+	test: "xo && nyc ava",
+	coveralls: "nyc report --reporter=text-lcov | coveralls"
 };
-var _requiredBy$1 = [
-	"/download"
+var files = [
+	"index.js",
+	"errors.js"
 ];
-var _resolved$1 = "https://registry.npm.taobao.org/got/download/got-8.3.2.tgz";
-var _spec$1 = "8.3.2";
-var _where$1 = "/Users/l.rain/Documents/workspace/fanstuan/packages/cli";
-var ava = {
-	concurrency: 4
-};
-var browser = {
-	"decompress-response": false,
-	electron: false
-};
-var bugs$1 = {
-	url: "https://github.com/sindresorhus/got/issues"
-};
+var keywords = [
+	"http",
+	"https",
+	"get",
+	"got",
+	"url",
+	"uri",
+	"request",
+	"util",
+	"utility",
+	"simple",
+	"curl",
+	"wget",
+	"fetch",
+	"net",
+	"network",
+	"electron"
+];
 var dependencies$1 = {
 	"@sindresorhus/is": "^0.7.0",
 	"cacheable-request": "^2.1.1",
@@ -62895,7 +64351,6 @@ var dependencies$1 = {
 	"url-parse-lax": "^3.0.0",
 	"url-to-options": "^1.0.1"
 };
-var description$1 = "Simplified HTTP requests";
 var devDependencies$1 = {
 	ava: "^0.25.0",
 	coveralls: "^3.0.0",
@@ -62912,121 +64367,46 @@ var devDependencies$1 = {
 	"universal-url": "1.0.0-alpha",
 	xo: "^0.20.0"
 };
-var engines = {
-	node: ">=4"
+var ava = {
+	concurrency: 4
 };
-var files = [
-	"index.js",
-	"errors.js"
-];
-var homepage$1 = "https://github.com/sindresorhus/got#readme";
-var keywords = [
-	"http",
-	"https",
-	"get",
-	"got",
-	"url",
-	"uri",
-	"request",
-	"util",
-	"utility",
-	"simple",
-	"curl",
-	"wget",
-	"fetch",
-	"net",
-	"network",
-	"electron"
-];
-var license$1 = "MIT";
-var maintainers = [
-	{
-		name: "Sindre Sorhus",
-		email: "sindresorhus@gmail.com",
-		url: "sindresorhus.com"
-	},
-	{
-		name: "Vsevolod Strukchinsky",
-		email: "floatdrop@gmail.com",
-		url: "github.com/floatdrop"
-	},
-	{
-		name: "Alexander Tesfamichael",
-		email: "alex.tesfamichael@gmail.com",
-		url: "alextes.me"
-	}
-];
-var name$1 = "got";
-var repository$1 = {
-	type: "git",
-	url: "git+https://github.com/sindresorhus/got.git"
+var browser = {
+	"decompress-response": false,
+	electron: false
 };
-var scripts$1 = {
-	coveralls: "nyc report --reporter=text-lcov | coveralls",
-	test: "xo && nyc ava"
-};
-var version$2 = "8.3.2";
 var _package$2 = {
-	_args: _args$1,
-	_from: _from$1,
-	_id: _id$1,
-	_inBundle: _inBundle$1,
-	_integrity: _integrity$1,
-	_location: _location$1,
-	_phantomChildren: _phantomChildren$1,
-	_requested: _requested$1,
-	_requiredBy: _requiredBy$1,
-	_resolved: _resolved$1,
-	_spec: _spec$1,
-	_where: _where$1,
-	ava: ava,
-	browser: browser,
-	bugs: bugs$1,
-	dependencies: dependencies$1,
-	description: description$1,
-	devDependencies: devDependencies$1,
-	engines: engines,
-	files: files,
-	homepage: homepage$1,
-	keywords: keywords,
-	license: license$1,
-	maintainers: maintainers,
 	name: name$1,
+	version: version$2,
+	description: description$1,
+	license: license$1,
 	repository: repository$1,
+	maintainers: maintainers,
+	engines: engines,
 	scripts: scripts$1,
-	version: version$2
+	files: files,
+	keywords: keywords,
+	dependencies: dependencies$1,
+	devDependencies: devDependencies$1,
+	ava: ava,
+	browser: browser
 };
 
 var _package$3 = /*#__PURE__*/Object.freeze({
 	__proto__: null,
-	_args: _args$1,
-	_from: _from$1,
-	_id: _id$1,
-	_inBundle: _inBundle$1,
-	_integrity: _integrity$1,
-	_location: _location$1,
-	_phantomChildren: _phantomChildren$1,
-	_requested: _requested$1,
-	_requiredBy: _requiredBy$1,
-	_resolved: _resolved$1,
-	_spec: _spec$1,
-	_where: _where$1,
+	name: name$1,
+	version: version$2,
+	description: description$1,
+	license: license$1,
+	repository: repository$1,
+	maintainers: maintainers,
+	engines: engines,
+	scripts: scripts$1,
+	files: files,
+	keywords: keywords,
+	dependencies: dependencies$1,
+	devDependencies: devDependencies$1,
 	ava: ava,
 	browser: browser,
-	bugs: bugs$1,
-	dependencies: dependencies$1,
-	description: description$1,
-	devDependencies: devDependencies$1,
-	engines: engines,
-	files: files,
-	homepage: homepage$1,
-	keywords: keywords,
-	license: license$1,
-	maintainers: maintainers,
-	name: name$1,
-	repository: repository$1,
-	scripts: scripts$1,
-	version: version$2,
 	'default': _package$2
 });
 
@@ -63131,7 +64511,7 @@ var errors = {
 
 var pkg = getCjsExportFromNamespace(_package$3);
 
-const PassThrough$8 = stream$2.PassThrough;
+const PassThrough$a = stream$2.PassThrough;
 const Transform$3 = stream$2.Transform;
 
 
@@ -63491,7 +64871,7 @@ function asPromise(opts) {
 		});
 
 		ee.on('response', res => {
-			const stream = dist.null(opts.encoding) ? getStream_1$1.buffer(res) : getStream_1$1(res, opts);
+			const stream = dist.null(opts.encoding) ? getStream_1$3.buffer(res) : getStream_1$3(res, opts);
 
 			stream
 				.catch(err => reject(new got.ReadError(err, opts)))
@@ -63552,8 +64932,8 @@ function asPromise(opts) {
 function asStream(opts) {
 	opts.stream = true;
 
-	const input = new PassThrough$8();
-	const output = new PassThrough$8();
+	const input = new PassThrough$a();
+	const output = new PassThrough$a();
 	const proxy = duplexer3(input, output);
 	let timeout;
 
@@ -64080,7 +65460,7 @@ const xpiZipFilename$1 = toBytes$1('META-INF/mozilla.rsa');
 const oxmlContentTypes$1 = toBytes$1('[Content_Types].xml');
 const oxmlRels$1 = toBytes$1('_rels/.rels');
 
-var fileType$5 = input => {
+var fileType$4 = input => {
 	const buf = input instanceof Uint8Array ? input : new Uint8Array(input);
 
 	if (!(buf && buf.length > 1)) {
@@ -75353,7 +76733,7 @@ const getFilename = (res, data) => {
 	let filename = filenameFromPath(res);
 
 	if (!path$1.extname(filename)) {
-		const ext = (fileType$5(data) || {}).ext || getExtFromMime(res);
+		const ext = (fileType$4(data) || {}).ext || getExtFromMime(res);
 
 		if (ext) {
 			filename = `${filename}.${ext}`;
@@ -81012,7 +82392,7 @@ function checkNodeVersion (wanted, cliName) {
   // 检测node版本是否符合要求范围
   if (!semver$2.satisfies(process.version, wanted)) {
     console.log(
-      source.red(
+      chalk.red(
         'You are using Node ' +
           process.version +
           ', but this version of ' +
@@ -81027,7 +82407,7 @@ function checkNodeVersion (wanted, cliName) {
   }
 }
 
-const array$2 = [];
+const array$4 = [];
 const charCodeCache = [];
 
 const leven = (left, right) => {
@@ -81081,7 +82461,7 @@ const leven = (left, right) => {
 
 	while (i < leftLength) {
 		charCodeCache[i] = left.charCodeAt(start + i);
-		array$2[i] = ++i;
+		array$4[i] = ++i;
 	}
 
 	while (j < rightLength) {
@@ -81091,9 +82471,9 @@ const leven = (left, right) => {
 
 		for (i = 0; i < leftLength; i++) {
 			temp2 = bCharCode === charCodeCache[i] ? temp : temp + 1;
-			temp = array$2[i];
+			temp = array$4[i];
 			// eslint-disable-next-line no-multi-assign
-			result = array$2[i] = temp > result ? temp2 > result ? result + 1 : temp2 : temp2 > temp ? temp + 1 : temp2;
+			result = array$4[i] = temp > result ? temp2 > result ? result + 1 : temp2 : temp2 > temp ? temp + 1 : temp2;
 		}
 	}
 
@@ -81372,7 +82752,7 @@ function suggestCommands (cmd) {
   // 简易智能匹配用户命令
   const suggestion = didYouMean.default(cmd, avaliableCommands);
   if (suggestion) {
-    console.log('  ' + source.red(`Did you mean ${source.yellow(suggestion)}?`));
+    console.log('  ' + chalk.red(`Did you mean ${chalk.yellow(suggestion)}?`));
   }
 }
 
@@ -81398,7 +82778,7 @@ commander
 commander.arguments('<command>').action(cmd => {
   // 不退出输出帮助信息
   commander.outputHelp();
-  console.log('  ' + source.red(`Unknown command ${source.yellow(cmd)}.`));
+  console.log('  ' + chalk.red(`Unknown command ${chalk.yellow(cmd)}.`));
   suggestCommands(cmd);
 });
 

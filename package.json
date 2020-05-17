@@ -6,7 +6,7 @@
     "test": "node --experimental-modules packages/cli/bin/fantuan.js",
     "format": "prettier-standard packages/cli/bin/index.js",
     "clear": "rd /S /Q node_modules",
-    "link-cli":"cd packages/cli && npm link && cd ../../"
+    "link-cli": "cd packages/cli && npm link && cd ../../"
   },
   "workspaces": [
     "packages/*"
@@ -23,6 +23,7 @@
     "eslint-plugin-standard": "^4.0.1",
     "lerna": "^3.21.0",
     "rollup": "^2.10.0",
-    "rollup-plugin-node-resolve": "^5.2.0"
+    "rollup-plugin-hashbang": "^2.2.2",
+    "rollup-plugin-node-polyfills": "^0.2.1"
   }
 }
