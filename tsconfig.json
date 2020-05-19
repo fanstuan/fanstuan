@@ -1,3 +1,4 @@
 {
-  "esModuleInterop": true
+  "compilerOptions": {
+  }
 }
