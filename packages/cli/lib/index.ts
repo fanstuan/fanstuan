@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 import chalk from 'chalk'
-import * as program from 'commander'
+import commander from 'commander'
 import inquirer from 'inquirer'
-import { git } from './promptModules/index.ts'
-import checkNodeVersion from './utils/checkNodeVersion.ts'
-import suggestCommands from './utils/suggestCommands.ts'
-import requireFile from './utils/requireFile.ts'
-const requiredNodeVersion = requireFile('../package.json')
-
-// 检测node版本是否符合要求
-checkNodeVersion(requiredNodeVersion.engines.node, '@fanstuan/cli')
+import { git } from './promptModules/index.js'
+// import checkNodeVersion from './utils/checkNodeVersion.js'
+import suggestCommands from './utils/suggestCommands.js'
+// import requiredNodeVersion from '../package.json'
+// // import requireFile from './utils/requireFile.js'
+// // const requiredNodeVersion = requireFile('../package.json')
+// console.log(requiredNodeVersion)
+// // 检测node版本是否符合要求
+// checkNodeVersion(requiredNodeVersion.engines.node, '@fanstuan/cli')
+const { program } = commander
 
 program
   .command('download')

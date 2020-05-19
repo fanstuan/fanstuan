@@ -1,2 +1,2 @@
-import git from './modules/git.ts'
+import git from './modules/git.js'
 export { git }
