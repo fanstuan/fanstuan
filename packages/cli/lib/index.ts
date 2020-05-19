@@ -3,9 +3,9 @@ import chalk from 'chalk'
 import * as program from 'commander'
 import inquirer from 'inquirer'
 import { git } from './promptModules/index.ts'
-import checkNodeVersion from './util/checkNodeVersion.ts'
-import suggestCommands from './util/suggestCommands.ts'
-import requireFile from './util/requireFile.ts'
+import checkNodeVersion from './utils/checkNodeVersion.ts'
+import suggestCommands from './utils/suggestCommands.ts'
+import requireFile from './utils/requireFile.ts'
 const requiredNodeVersion = requireFile('../package.json')
 
 // 检测node版本是否符合要求

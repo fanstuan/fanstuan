@@ -1,4 +1,20 @@
 {
   "compilerOptions": {
+    "baseUrl": ".", // 基础路径
+    "target": "ESNext", // 指定ECMAScript目标版本
+    "strict": true,
+    "moduleResolution": "node", // 使用什么解析形式
+    "noUnusedLocals": true, // 未使用的变量报错
+    "resolveJsonModule": true, // 支持import加载json文件
+    "allowJs": true, // 允许js文件参与编译
+    "esModuleInterop": true,
+    "lib": ["ESNext"], // 编译过程中需要引入的库文件的列表。
+    "paths": {
+      // 模块名到基于baseUrl的路径映射的列表。查看模块解析文档了解详情。
+      "utils": ["packages/cli/utils"]
+    },
+    "types": ["node"], // 要包含的类型声明文件名列表
+    "module": "ESNext", //  so that TypeScript emits import/export syntax.
+    "incremental": true // 增量更新
   }
 }

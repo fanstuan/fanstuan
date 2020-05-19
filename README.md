@@ -15,3 +15,5 @@ lerna add commander --scope=@fanstuan/cli
 ## 问题
 ### 为子包添加依赖报错?
 可能是因为当前npm远程库不对导致，切换到npm自带的远程库或者`taobao`
+### 为什么不使用`ts-node`开发
+因为ts-node不支持esm
