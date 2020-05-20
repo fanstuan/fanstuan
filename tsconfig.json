@@ -7,7 +7,7 @@
     // "noUnusedLocals": true, // 未使用的变量报错
     "resolveJsonModule": true, // 支持import加载json文件
     "allowJs": true, // 允许js文件参与编译
-    // "esModuleInterop": true,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports":true,
     "lib": ["ESNext"], // 编译过程中需要引入的库文件的列表。
     "paths": {
@@ -19,7 +19,7 @@
     "incremental": true, // 增量更新
     "sourceMap": true // 调试启用源码映射
   },
-  "exclude": [
-    "./rollup.config.js"
+  "include": [
+    "packages/cli"
   ]
 }

@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "commander": "^5.1.0",
-    "didyoumean2": "^4.0.0",
+    "didyoumean": "^1.2.1",
     "download-git-repo": "^3.0.2",
     "inquirer": "^7.1.0",
     "semver": "^7.3.2"

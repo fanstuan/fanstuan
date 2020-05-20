@@ -1,5 +1,9 @@
 {
     "cSpell.words": [
         "fanstuan"
-    ]
+    ],
+    "files.exclude": {
+        "packages/**/**.js": true,
+        "packages/**/**.js.map": true
+    }
 }

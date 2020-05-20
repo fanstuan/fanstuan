@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 import chalk from 'chalk'
-import commander from 'commander'
+import program from 'commander'
 import inquirer from 'inquirer'
 import { git } from './promptModules/index.js'
 // import checkNodeVersion from './utils/checkNodeVersion.js'
 import suggestCommands from './utils/suggestCommands.js'
-// import requiredNodeVersion from '../package.json'
-// // import requireFile from './utils/requireFile.js'
-// // const requiredNodeVersion = requireFile('../package.json')
-// console.log(requiredNodeVersion)
+// import requireFile from './utils/requireFile.js'
+
+// const requiredNodeVersion = requireFile('../package.json')
+
 // // 检测node版本是否符合要求
 // checkNodeVersion(requiredNodeVersion.engines.node, '@fanstuan/cli')
-const { program } = commander
 
 program
   .command('download')
