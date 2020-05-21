@@ -8,10 +8,24 @@
     "clear": "rd /S /Q node_modules",
     "link-cli": "cd packages/cli && npm link && cd ../../"
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "packages/**/*.{ts,js,json,css}": [
+      "prettier-standard --lint",
+      "git add"
+    ]
+  },
   "workspaces": [
     "packages/*"
   ],
   "devDependencies": {
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-conventional": "^8.3.4",
     "@rollup/plugin-commonjs": "^12.0.0",
     "@rollup/plugin-json": "^4.0.3",
     "@rollup/plugin-node-resolve": "^8.0.0",
@@ -25,7 +39,10 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
+    "husky": "^4.2.5",
     "lerna": "^3.21.0",
+    "lint-staged": "^10.2.4",
+    "prettier-standard": "^16.3.0",
     "rollup": "^2.10.5",
     "rollup-plugin-hashbang": "^2.2.2",
     "rollup-plugin-node-polyfills": "^0.2.1",
