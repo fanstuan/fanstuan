@@ -1,4 +1,4 @@
-import didYouMean from 'didyoumean2'// 简易的智能匹配引擎
+import didYouMean from 'didyoumean'// 简易的智能匹配引擎
 import program from 'commander'
 import chalk from 'chalk'
 export default function suggestCommands (cmd) {
