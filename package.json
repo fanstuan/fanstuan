@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "rollup -c",
-    "test": "ts-node packages/cli/lib/index.ts",
+    "test": "node --experimental-modules packages/cli/lib/index.js",
     "format": "prettier-standard packages/cli/bin/index.js",
     "clear": "rd /S /Q node_modules",
     "link-cli": "cd packages/cli && npm link && cd ../../"

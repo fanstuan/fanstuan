@@ -1,9 +1,9 @@
 # fanstuan
 目录结构参考`vue-cli`
 ## WIP
-- [ ] download 远程git包
+- [x] download 远程git包
     - [ ] 编写命令行，接收参数等
-    - [ ] 添加代码提交校验
+    - [x] 添加代码提交校验
 - [ ] cli生成模板文件
 ## 前置条件
 node v13之前的版本需要单独设置开启`ECMAScript Modules`支持

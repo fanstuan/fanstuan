@@ -3,14 +3,14 @@ import chalk from 'chalk'
 import program from 'commander'
 import inquirer from 'inquirer'
 import { git } from './promptModules/index.js'
-// import checkNodeVersion from './utils/checkNodeVersion.js'
+import checkNodeVersion from './utils/checkNodeVersion.js'
 import suggestCommands from './utils/suggestCommands.js'
-// import requireFile from './utils/requireFile.js'
+import requireFile from './utils/requireFile.js'
 
-// const requiredNodeVersion = requireFile('../package.json')
+const requiredNodeVersion = requireFile('../package.json')
 
 // // 检测node版本是否符合要求
-// checkNodeVersion(requiredNodeVersion.engines.node, '@fanstuan/cli')
+checkNodeVersion(requiredNodeVersion.engines.node, '@fanstuan/cli')
 
 program
   .command('download')
