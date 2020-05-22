@@ -1,14 +1,10 @@
-#!/usr/bin/env node
 import chalk from 'chalk'
 import program from 'commander'
 import inquirer from 'inquirer'
-import { git } from './promptModules/index.js'
-import checkNodeVersion from './utils/checkNodeVersion.js'
-import suggestCommands from './utils/suggestCommands.js'
-import requireFile from './utils/requireFile.js'
-
-const requiredNodeVersion = requireFile('../package.json')
-
+import { git } from './promptModules/index'
+import checkNodeVersion from './utils/checkNodeVersion'
+import suggestCommands from './utils/suggestCommands'
+const requiredNodeVersion = require('../package.json')
 // // 检测node版本是否符合要求
 checkNodeVersion(requiredNodeVersion.engines.node, '@fanstuan/cli')
 
@@ -17,7 +13,7 @@ program
   .description('选择一个远程仓库下载到本地')
   .action(() => {
     inquirer.prompt(git.prompt).then(async (answers: object) => {
-      await git.onPromptComplete({ answers }).catch(e => {
+      await git.onPromptComplete({ answers }).catch((e: any) => {
         console.log(e)
       })
     })

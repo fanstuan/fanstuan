@@ -1,2 +1,3 @@
-import git from './modules/git.js'
+import git from './modules/git'
+console.log(123)
 export { git }

@@ -15,7 +15,6 @@
   "bin": {
     "fantuan": "./bin/fantuan.js"
   },
-  "type": "module",
   "files": [
     "lib"
   ],

@@ -1,8 +1,14 @@
+// @ts-ignore
 import download from 'download-git-repo'
+
 const option = {
   clone: true
 }
-const choices = {
+
+// interface Choices {
+//   [key:string]: string,
+// }
+const choices: any = {
   'react-chat': 'github:baixiaoyu2997/react-chat',
   'vue-work': 'github:baixiaoyu2997/vue-work'
 }
@@ -15,10 +21,11 @@ const prompt = [
   }
 ]
 
-const onPromptComplete: any = ({ answers }) => {
+const onPromptComplete = ({ answers }: any): Promise<null | object> => {
   return new Promise((resolve, reject) => {
     // TODO : 目前下载路径写死为当前目录
-    download(choices[answers.git], answers.git, option, err => {
+    download(choices[answers.git], answers.git, option, (err: object) => {
+      console.log(err)
       if (err) return reject(err)
       resolve()
     })

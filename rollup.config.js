@@ -6,12 +6,10 @@ import nodeResolve from '@rollup/plugin-node-resolve'
 
 // console.log(pkg)
 export default {
-  input: 'packages/cli/lib/index.ts',
+  input: 'packages/cli/lib/index.js',
   output: {
-    file: 'packages/cli/bin/fantuan.ts',
-    format: 'es'
+    file: 'packages/cli/bin/fantuan.js'
   },
-  external: ['electron'],
   plugins: [hashbang(), json(), nodeResolve(), commonjs()]
   //   // 指出应将哪些模块视为外部模块
   //   external: [
