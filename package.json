@@ -4,7 +4,7 @@
   "scripts": {
     "rollup": "rollup -c",
     "build": "node packages/cli/lib/index.ts",
-    "test": "node packages/cli/lib/index.js",
+    "test": "node packages/cli/dist/index.js",
     "format": "prettier-standard packages/cli/bin/index.js",
     "clear": "rd /S /Q node_modules",
     "link-cli": "cd packages/cli && npm link && cd ../../"
@@ -49,6 +49,7 @@
     "prettier-standard": "^16.3.0",
     "rollup": "^2.10.5",
     "rollup-plugin-hashbang": "^2.2.2",
+    "rollup-plugin-node-externals": "^2.2.0",
     "rollup-plugin-node-polyfills": "^0.2.1",
     "typescript": "^3.9.3"
   }

@@ -5,6 +5,7 @@ import { git } from './promptModules/index'
 import checkNodeVersion from './utils/checkNodeVersion'
 import suggestCommands from './utils/suggestCommands'
 const requiredNodeVersion = require('../package.json')
+
 // // 检测node版本是否符合要求
 checkNodeVersion(requiredNodeVersion.engines.node, '@fanstuan/cli')
 
