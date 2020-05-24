@@ -4,6 +4,11 @@ import inquirer from 'inquirer'
 import { git } from './promptModules/index'
 import checkNodeVersion from './utils/checkNodeVersion'
 import suggestCommands from './utils/suggestCommands'
+// @ts-ignore
+import { fetchPkg } from 'fetch-pkg'
+// const packageJson = require('package-json')
+
+import fs from 'fs'
 const requiredNodeVersion = require('../package.json')
 
 // // 检测node版本是否符合要求
@@ -20,6 +25,29 @@ program
     })
   })
 
+program
+  .command('add')
+  .description('添加一个模板')
+  .action(async () => {
+    console.time()
+    // console.log(
+    //   await packageJson('@fanstuan/cli-template', {
+    //     registryUrl: 'https://npm.pkg.github.com'
+    //   })
+    // )
+    // console.log(console.timeEnd)
+    fetchPkg('@fanstuan/cli-template', {
+      registryURL: 'https://npm.pkg.github.com',
+      token: 'bd7ff84f88c5007229a2f553130cdae3e5a2860b'
+    })
+      .then(pkg => {
+        console.timeEnd()
+        pkg.pipe(fs.createWriteStream('template')).once('finish', () => {
+          process.exit(0)
+        })
+      })
+      .catch(e => console.log(e))
+  })
 // 处理非法命令
 program.arguments('<command>').action(cmd => {
   // 不退出输出帮助信息
