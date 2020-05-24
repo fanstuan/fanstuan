@@ -6,7 +6,7 @@
   "homepage": "https://github.com/fanstuan/fanstuan#readme",
   "license": "ISC",
   "publishConfig": {
-    "registry": "https://registry.npm.taobao.org/"
+    "access": "public"
   },
   "repository": {
     "type": "git",
