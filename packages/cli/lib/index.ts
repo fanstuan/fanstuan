@@ -14,8 +14,8 @@ program
   .description('选择一个远程仓库下载到本地')
   .action(() => {
     inquirer.prompt(git.prompt).then(async (answers: object) => {
-      await git.onPromptComplete({ answers }).catch((e: any) => {
-        console.log(e)
+      await git.onPromptComplete({ answers }).catch(() => {
+        process.exit()
       })
     })
   })
