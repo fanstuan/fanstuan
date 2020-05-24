@@ -1,0 +1,21 @@
+{
+  "name": "@fanstuan/cli-template",
+  "version": "0.0.5-alpha.0",
+  "description": "> TODO: description",
+  "author": "L.Rain <bxy2997@sina.com>",
+  "homepage": "https://github.com/fanstuan/fanstuan#readme",
+  "license": "ISC",
+  "publishConfig": {
+    "registry": "https://registry.npm.taobao.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fanstuan/fanstuan.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/fanstuan/fanstuan/issues"
+  }
+}
