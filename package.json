@@ -2,8 +2,8 @@
   "name": "root",
   "private": true,
   "scripts": {
-    "webpack": "webpack",
-    "build": "node packages/cli/lib/index.ts",
+    "build": "webpack",
+    "deploy":"lerna publish",
     "test": "node packages/cli/bin/fantuan.js",
     "format": "prettier-standard packages/cli/bin/index.js",
     "clear": "rd /S /Q node_modules",
