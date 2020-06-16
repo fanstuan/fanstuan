@@ -11,7 +11,7 @@ import { fetchPkg } from 'fetch-pkg'
 import fs from 'fs'
 import requiredNodeVersion from '../package.json'
 
-// // 检测node版本是否符合要求
+// 检测node版本是否符合要求
 checkNodeVersion(requiredNodeVersion.engines.node, '@fanstuan/cli')
 
 program
