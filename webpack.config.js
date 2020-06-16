@@ -13,12 +13,15 @@ module.exports = {
       }
     ]
   },
-  plugins: [new webpack.IgnorePlugin(/^electron$/)],
+  plugins: [
+    new webpack.BannerPlugin({ banner: '#!/usr/bin/env node', raw: true }),
+    new webpack.IgnorePlugin(/^electron$/)
+  ],
   resolve: {
     extensions: ['.js', '.ts', '.json']
   },
   output: {
     filename: 'fantuan.js',
-    path: path.resolve(__dirname+'/packages/cli/', 'bin')
+    path: path.resolve(path.join(__dirname, '/packages/cli/'), 'bin')
   }
 }
