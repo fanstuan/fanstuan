@@ -8,7 +8,7 @@
   "engines": {
     "node": ">=12"
   },
-  "main": "lib/cli.js",
+  "main": "./bin/fantuan.js",
   "directories": {
     "lib": "lib"
   },
@@ -16,7 +16,7 @@
     "fantuan": "./bin/fantuan.js"
   },
   "files": [
-    "lib"
+    "./bin"
   ],
   "publishConfig": {
     "access": "public"

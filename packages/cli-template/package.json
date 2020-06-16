@@ -5,6 +5,9 @@
   "author": "L.Rain <bxy2997@sina.com>",
   "homepage": "https://github.com/fanstuan/fanstuan#readme",
   "license": "ISC",
+  "files": [
+    "template"
+  ],
   "publishConfig": {
     "access": "public"
   },
