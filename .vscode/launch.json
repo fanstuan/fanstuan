@@ -11,7 +11,7 @@
       "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}/packages/cli/lib/index.ts",
       "preLaunchTask": "tsc: 构建 - tsconfig.json",
-      "args": ["test", "download"],
+      "args": ["download"],
       "outFiles": ["${workspaceFolder}/packages/cli/**/*.js"]
     }
   ]

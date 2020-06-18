@@ -30,6 +30,8 @@
     "url": "https://github.com/fanstuan/fanstuan/issues"
   },
   "devDependencies": {
+    "@types/clear": "^0.1.0",
+    "clear": "^0.1.0",
     "commander": "^5.1.0",
     "didyoumean": "^1.2.1",
     "download-git-repo": "^3.0.2",
