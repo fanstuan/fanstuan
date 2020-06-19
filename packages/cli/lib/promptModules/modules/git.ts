@@ -7,10 +7,14 @@ const ora = require('ora')
 
 const option = {}
 
-const choices: any = {
+interface Choices {
+  [props: string]: string
+}
+const choices: Choices = {
   'fantuan.yaadmin': 'https://git.nerdlinux.com/fantuan.yaadmin.git',
   'fantuan.react': 'https://git.nerdlinux.com/fantuan.react.git'
 }
+
 const prompt = [
   {
     type: 'list',

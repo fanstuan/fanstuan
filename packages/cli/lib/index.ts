@@ -48,8 +48,9 @@ program
       })
       .catch((e: object) => console.log(e))
   })
+
 // 处理非法命令
-program.arguments('<command>').action(cmd => {
+program.arguments('<command>').action((cmd: any) => {
   // 不退出输出帮助信息
   program.outputHelp()
   console.log('  ' + chalk.red(`Unknown command ${chalk.yellow(cmd)}.`))
