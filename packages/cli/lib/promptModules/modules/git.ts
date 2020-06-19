@@ -1,18 +1,15 @@
 // @ts-ignore
-import download from 'download-git-repo'
+import download from 'git-clone'
 import file from '../../utils/file'
 import chalk from 'chalk'
-import clear from 'clear'
 
 const ora = require('ora')
 
-const option = {
-  clone: true
-}
+const option = {}
 
 const choices: any = {
-  'fantuan.yaadmin': 'direct:https://git.nerdlinux.com/fantuan.yaadmin.git',
-  'fantuan.react': 'direct:https://git.nerdlinux.com/fantuan.react.git'
+  'fantuan.yaadmin': 'https://git.nerdlinux.com/fantuan.yaadmin.git',
+  'fantuan.react': 'https://git.nerdlinux.com/fantuan.react.git'
 }
 const prompt = [
   {
@@ -25,7 +22,6 @@ const prompt = [
 
 const onPromptComplete = ({ answers }: any): Promise<null | object> => {
   return new Promise((resolve, reject) => {
-    clear()
     if (file.directoryExists(answers.git)) {
       console.log(chalk.red(`已经存在${answers.git}目录`))
       reject(new Error())
@@ -37,8 +33,10 @@ const onPromptComplete = ({ answers }: any): Promise<null | object> => {
     download(choices[answers.git], answers.git, option, (err: object) => {
       spinner.stop()
       if (err) {
+        console.log(err)
         return reject(err)
       } else {
+        console.log(chalk.green('✨ 下载成功'))
         resolve()
       }
     })
