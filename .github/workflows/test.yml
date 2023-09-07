@@ -1,0 +1,25 @@
+name: Get New Comment
+on:
+  issue_comment:
+    types:
+      - created
+
+jobs:
+  get-comment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get Comment
+        id: comment
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo, issue, comment } = context.payload;
+
+            console.log(`New comment: ${comment.body}`);
+
+            return comment.body
