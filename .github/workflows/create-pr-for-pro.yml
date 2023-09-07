@@ -15,8 +15,8 @@ jobs:
       - name: Test
         run: |
           echo "==================="
-          COMMENT_BODY=$(jq -r .comment.body "${{ github.event_path }}")
-          COMMENT_USER=$(jq -r .comment.user.login "${{ github.event_path }}")
+          COMMENT_BODY=$(jq -r '.comment.body' ${{ github.event_path }})
+          COMMENT_USER=$(jq -r '.comment.user.login' ${{ github.event_path }})
 
           echo "===================1"
           echo $COMMENT_BODY
