@@ -18,7 +18,7 @@ jobs:
       - name: Check comment and trigger actions
         id: check_comment
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
           COMMENT_BODY=$(jq -r .comment.body "${{ github.event_path }}")
           COMMENT_USER=$(jq -r .comment.user.login "${{ github.event_path }}")
