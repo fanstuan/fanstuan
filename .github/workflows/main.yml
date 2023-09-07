@@ -8,3 +8,4 @@ jobs:
     uses: fanstuan/fanstuan/.github/workflows/test.yml@master
     with:
       php: "zhangsan"
+    secrets: inherit
