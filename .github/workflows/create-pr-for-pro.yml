@@ -1,0 +1,41 @@
+name: Submodule updates to pro repo
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  update:
+    name: Update submodules
+    runs-on: ubuntu-latest
+    env:
+      CHECKOUT_BRANCH: "develop"
+
+    steps:
+      - name: Test
+        run: |
+          echo "==================="
+      - name: Check comment and trigger actions
+        id: check_comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMENT_BODY=$(jq -r .comment.body "${{ github.event_path }}")
+          COMMENT_USER=$(jq -r .comment.user.login "${{ github.event_path }}")
+          ORGANIZATION_MEMBERS=$(gh api /orgs/fanstuan/members --paginate -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.PAT }}")
+          if [[ "$COMMENT_BODY" == "/ci-test" && $(echo "$ORGANIZATION_MEMBERS" | jq -r ".[].login" | grep "$COMMENT_USER") ]]; then
+            echo "::set-output name=action::test"
+          elif [[ "$COMMENT_BODY" == "/ci-update" && $(echo "$ORGANIZATION_MEMBERS" | jq -r ".[].login" | grep "$COMMENT_USER") ]]; then
+            echo "::set-output name=action::update"
+          else
+            echo "::set-output name=action::none"
+          fi
+
+      - name: Log Test
+        if: ${{ steps.check_comment.outputs.action == 'test' }}
+        run: |
+          echo '===========test'
+      - name: Log Update
+        if: ${{ steps.check_comment.outputs.action == 'update' }}
+        run: |
+          echo '===========update'
