@@ -1,8 +1,11 @@
 name: Get New Comment
+
 on:
-  issue_comment:
-    types:
-      - created
+  workflow_call:
+    inputs:
+      php:
+        default: "7.0"
+        type: string
 
 jobs:
   get-comment:
@@ -21,5 +24,5 @@ jobs:
             const { owner, repo, issue, comment } = context.payload;
 
             console.log(`New comment: ${comment.body}`);
-
+            console.log(${{ inputs.php }})
             return comment.body
