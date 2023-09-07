@@ -15,6 +15,16 @@ jobs:
       - name: Test
         run: |
           echo "==================="
+          COMMENT_BODY=$(jq -r .comment.body "${{ github.event_path }}")
+          COMMENT_USER=$(jq -r .comment.user.login "${{ github.event_path }}")
+          ORGANIZATION_MEMBERS=$(gh api /orgs/fanstuan/members --paginate -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.PAT }}")
+          echo "===================1"
+          echo $COMMENT_BODY
+          echo "===================2"
+          echo $COMMENT_USER
+          echo "===================3"
+          echo $ORGANIZATION_MEMBERS
+          echo "===================4"
       - name: Check comment and trigger actions
         id: check_comment
         env:
