@@ -1,0 +1,10 @@
+name: Main
+on:
+  issue_comment:
+    types:
+      - created
+jobs:
+  update:
+    uses: fanstuan/fanstuan/.github/workflows/test.yaml
+    secrets:
+      php: "zhangsan"
