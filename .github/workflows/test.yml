@@ -24,5 +24,4 @@ jobs:
             const { owner, repo, issue, comment } = context.payload;
 
             console.log(`New comment: ${comment.body}`);
-            console.log(${{ inputs.php }})
             return comment.body
