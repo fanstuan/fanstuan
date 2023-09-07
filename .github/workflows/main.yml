@@ -5,6 +5,6 @@ on:
       - created
 jobs:
   update:
-    uses: fanstuan/fanstuan/.github/workflows/test.yaml
+    uses: fanstuan/fanstuan/.github/workflows/test.yaml@main
     secrets:
       php: "zhangsan"
